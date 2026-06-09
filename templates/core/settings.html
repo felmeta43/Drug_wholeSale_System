@@ -1,0 +1,488 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Company Settings - {{ company.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Company Settings</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-gear-wide-connected text-primary me-2"></i>Company Settings</h4>
+        <small class="text-muted">Customize the system for your company — changes apply immediately across all pages</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<!-- Live Preview Bar -->
+<div class="card mb-4" id="preview-bar">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div>
+                <small class="text-muted d-block mb-1">Live Preview</small>
+                <strong id="preview-name">{{ company.name }}</strong>
+                <span class="text-muted ms-2" id="preview-tagline" style="font-size:0.8rem;">{{ company.tagline }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="color-preview rounded" id="preview-primary" style="width:28px;height:28px;background:{{ company.primary_color }};border:2px solid #dee2e6;"></div>
+                <div class="color-preview rounded" id="preview-secondary" style="width:28px;height:28px;background:{{ company.secondary_color }};border:2px solid #dee2e6;"></div>
+                <div class="color-preview rounded" id="preview-accent" style="width:28px;height:28px;background:{{ company.accent_color }};border:2px solid #dee2e6;"></div>
+                <small class="text-muted ms-1">Brand colors</small>
+            </div>
+            <div>
+                <span class="badge" id="preview-currency" style="background:{{ company.primary_color }};font-size:0.8rem;padding:6px 12px;">
+                    {{ company.currency_symbol }} {{ company.currency }}
+                </span>
+            </div>
+            <div>
+                <span class="text-muted small">VAT: </span>
+                <strong id="preview-vat">{{ company.vat_rate }}%</strong>
+                <span class="text-muted small ms-1" id="preview-vat-label">({{ company.vat_label }})</span>
+            </div>
+            <div>
+                <span class="text-muted small">Regulatory: </span>
+                <strong id="preview-regbody">{{ company.regulatory_body }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="settingsForm">
+    {% csrf_token %}
+    <div class="row g-4">
+
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8">
+
+            <!-- Identity -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-building me-2 text-primary"></i>Company Identity</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Company Name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Short Name (sidebar)</label>
+                            {{ form.short_name }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Tagline</label>
+                            {{ form.tagline }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Logo <small class="text-muted">(recommended 200×60 px PNG)</small></label>
+                            {% if company.logo %}
+                            <div class="mb-2">
+                                <img src="{{ company.logo.url }}" alt="Logo" style="max-height:50px;max-width:200px;border:1px solid #dee2e6;border-radius:6px;padding:4px;">
+                                <small class="text-muted d-block mt-1">Current logo</small>
+                            </div>
+                            {% endif %}
+                            {{ form.logo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Logo Icon <small class="text-muted">(64×64 px square)</small></label>
+                            {% if company.logo_icon %}
+                            <div class="mb-2">
+                                <img src="{{ company.logo_icon.url }}" alt="Icon" style="height:40px;width:40px;border-radius:8px;object-fit:cover;border:1px solid #dee2e6;">
+                            </div>
+                            {% endif %}
+                            {{ form.logo_icon }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-geo-alt me-2 text-primary"></i>Contact Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Address</label>
+                            {{ form.address }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">City</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Country</label>
+                            {{ form.country }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Phone</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Website</label>
+                            {{ form.website }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legal & Tax -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-shield-check me-2 text-primary"></i>Legal & Regulatory</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">TIN Number</label>
+                            {{ form.tin_number }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">VAT Registration No.</label>
+                            {{ form.vat_number }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Business License No.</label>
+                            {{ form.business_license }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Regulatory Body
+                                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="e.g. EFDA (Ethiopia), FDA (USA), NAFDAC (Nigeria), MCA (UK), TGA (Australia)"></i>
+                            </label>
+                            {{ form.regulatory_body }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Regulatory License Number</label>
+                            {{ form.regulatory_license }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-currency-exchange me-2 text-primary"></i>Financial Settings</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Currency Code
+                                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="ISO 4217: ETB, USD, EUR, KES, NGN, GHS, ZAR, GBP..."></i>
+                            </label>
+                            {{ form.currency }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Currency Symbol</label>
+                            {{ form.currency_symbol }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ form.vat_label.label }}</label>
+                            {{ form.vat_label }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tax Rate (%)</label>
+                            <div class="input-group">
+                                {{ form.vat_rate }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Withholding Tax (%)</label>
+                            <div class="input-group">
+                                {{ form.withholding_tax_rate }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Default Payment Terms</label>
+                            <div class="input-group">
+                                {{ form.default_payment_terms_days }}
+                                <span class="input-group-text">days</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Expiry Alert Window</label>
+                            <div class="input-group">
+                                {{ form.expiry_alert_days }}
+                                <span class="input-group-text">days</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                {{ form.enable_vat }}
+                                <label class="form-check-label fw-semibold">Enable Tax (VAT/GST)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Numbering -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-hash me-2 text-primary"></i>Document Number Prefixes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Invoice Prefix</label>
+                            {{ form.invoice_prefix }}
+                            <small class="text-muted">e.g. INV-, BILL-</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Purchase Order Prefix</label>
+                            {{ form.po_prefix }}
+                            <small class="text-muted">e.g. PO-, ORD-</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sales Order Prefix</label>
+                            {{ form.so_prefix }}
+                            <small class="text-muted">e.g. SO-, SLS-</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Credit Note Prefix</label>
+                            {{ form.credit_note_prefix }}
+                            <small class="text-muted">e.g. CN-, CR-</small>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0 py-2">
+                        <small><i class="bi bi-info-circle me-1"></i>Prefixes apply to <strong>new</strong> documents only — existing numbers are not changed.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Templates -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-file-text me-2 text-primary"></i>Invoice & Document Defaults</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Invoice Footer Text</label>
+                            {{ form.invoice_footer }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Payment Terms Text</label>
+                            {{ form.invoice_terms }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-lg-4">
+
+            <!-- Branding -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-palette me-2 text-primary"></i>Brand Colors</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Primary Color <small class="text-muted">(main brand)</small></label>
+                            <div class="d-flex align-items-center gap-2">
+                                {{ form.primary_color }}
+                                <input type="text" class="form-control" id="primary-hex" value="{{ company.primary_color }}" placeholder="#006B3F" style="max-width:110px;">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Secondary Color <small class="text-muted">(accent)</small></label>
+                            <div class="d-flex align-items-center gap-2">
+                                {{ form.secondary_color }}
+                                <input type="text" class="form-control" id="secondary-hex" value="{{ company.secondary_color }}" placeholder="#FCDD09" style="max-width:110px;">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Alert Color <small class="text-muted">(warnings/danger)</small></label>
+                            <div class="d-flex align-items-center gap-2">
+                                {{ form.accent_color }}
+                                <input type="text" class="form-control" id="accent-hex" value="{{ company.accent_color }}" placeholder="#EF2B2D" style="max-width:110px;">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.sidebar_dark }}
+                                <label class="form-check-label">Dark sidebar (recommended)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-3 rounded" id="color-preview-box" style="background:{{ company.primary_color }};">
+                        <div class="text-white fw-bold">{{ company.name }}</div>
+                        <small class="text-white-50">Color preview</small>
+                        <div class="mt-2 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-light">Action</button>
+                            <span class="badge bg-warning text-dark">{{ company.vat_label }}</span>
+                            <span class="badge" style="background:{{ company.accent_color }};">Alert</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Localisation -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-globe me-2 text-primary"></i>Localisation</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Timezone</label>
+                            {{ form.timezone }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Date Format</label>
+                            {{ form.date_format }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Flags -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-toggles me-2 text-primary"></i>Feature Toggles</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="form-check form-switch">
+                            {{ form.enable_cold_chain }}
+                            <label class="form-check-label">
+                                <i class="bi bi-snow2 text-info me-1"></i>Cold Chain Tracking
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.enable_controlled_substances }}
+                            <label class="form-check-label">
+                                <i class="bi bi-lock text-danger me-1"></i>Controlled Substances Flag
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.enable_batch_tracking }}
+                            <label class="form-check-label">
+                                <i class="bi bi-boxes text-success me-1"></i>Batch / Lot Tracking
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.enable_multi_warehouse }}
+                            <label class="form-check-label">
+                                <i class="bi bi-building text-primary me-1"></i>Multi-Warehouse
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save me-2"></i>Save All Settings
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x me-1"></i>Cancel
+                        </a>
+                    </div>
+                    {% if company.updated_at %}
+                    <p class="text-muted small text-center mt-3 mb-0">
+                        Last saved: {{ company.updated_at|date:"d M Y H:i" }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sync color picker ↔ hex input
+    function syncColor(pickerId, hexId, previewId, cssVar) {
+        var picker = document.getElementById(pickerId);
+        var hex = document.getElementById(hexId);
+        var preview = document.getElementById(previewId);
+        if (!picker) return;
+
+        picker.addEventListener('input', function() {
+            if (hex) hex.value = this.value;
+            if (preview) preview.style.background = this.value;
+            updatePreviewBar();
+        });
+        if (hex) {
+            hex.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    picker.value = this.value;
+                    if (preview) preview.style.background = this.value;
+                    updatePreviewBar();
+                }
+            });
+        }
+    }
+
+    syncColor('id_primary_color', 'primary-hex', 'preview-primary');
+    syncColor('id_secondary_color', 'secondary-hex', 'preview-secondary');
+    syncColor('id_accent_color', 'accent-hex', 'preview-accent');
+
+    // Update color preview box
+    function updatePreviewBox() {
+        var primary = document.getElementById('id_primary_color')?.value;
+        if (primary) {
+            document.getElementById('color-preview-box').style.background = primary;
+        }
+    }
+    document.getElementById('id_primary_color')?.addEventListener('input', updatePreviewBox);
+
+    // Live preview bar updates
+    function updatePreviewBar() {
+        var name = document.getElementById('id_name')?.value;
+        var tagline = document.getElementById('id_tagline')?.value;
+        var currency = document.getElementById('id_currency')?.value;
+        var symbol = document.getElementById('id_currency_symbol')?.value;
+        var vat = document.getElementById('id_vat_rate')?.value;
+        var vatLabel = document.getElementById('id_vat_label')?.value;
+        var regBody = document.getElementById('id_regulatory_body')?.value;
+        var primary = document.getElementById('id_primary_color')?.value;
+
+        if (name) document.getElementById('preview-name').textContent = name;
+        if (tagline) document.getElementById('preview-tagline').textContent = tagline;
+        if (currency && symbol) {
+            var currEl = document.getElementById('preview-currency');
+            currEl.textContent = symbol + ' ' + currency;
+            if (primary) currEl.style.background = primary;
+        }
+        if (vat) document.getElementById('preview-vat').textContent = vat + '%';
+        if (vatLabel) document.getElementById('preview-vat-label').textContent = '(' + vatLabel + ')';
+        if (regBody) document.getElementById('preview-regbody').textContent = regBody;
+    }
+
+    ['id_name','id_tagline','id_currency','id_currency_symbol','id_vat_rate','id_vat_label','id_regulatory_body'].forEach(function(id) {
+        document.getElementById(id)?.addEventListener('input', updatePreviewBar);
+    });
+
+    // Toggle form-switch style for feature toggles
+    document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function(cb) {
+        if (!cb.closest('.form-switch')) {
+            var parent = cb.closest('.form-check');
+            if (parent) parent.classList.add('form-switch');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,13 +1,13 @@
 """
-Django settings for Medical Equipment & Medicine Wholesale System - Ethiopia
+Django settings for Medical Wholesale System
+Customizable for any company — configure via /settings/ or manage.py init_company
 """
 
 from pathlib import Path
-import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-ethiopia-medical-wholesale-system-2024-secret-key-change-in-production'
+SECRET_KEY = 'django-insecure-change-this-in-production-use-env-variable'
 
 DEBUG = True
 
@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_filters',
     'widget_tweaks',
+    # Local apps
+    'core',
     'accounts',
     'products',
     'inventory',
@@ -58,6 +60,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Company settings available as {{ company }} in all templates
+                'core.context_processors.company',
             ],
         },
     },
@@ -69,6 +73,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# In-memory cache — settings are cached for 1 hour
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
 
@@ -101,10 +112,3 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
-
-# Ethiopian VAT Rate
-VAT_RATE = 0.15
-
-# Currency
-CURRENCY = 'ETB'
-CURRENCY_SYMBOL = 'Br'

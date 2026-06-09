@@ -1,32 +1,70 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MediWholesale Ethiopia</title>
+    <title>Login - {{ company.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; max-width: 440px; width: 100%; }
-        .login-header { background: linear-gradient(135deg, #078930, #006B3F); padding: 30px; text-align: center; }
-        .flag-strip { height: 5px; background: linear-gradient(to right, #078930 33%, #FCDD09 33%, #FCDD09 66%, #DA121A 66%); }
-        .form-control:focus { border-color: #078930; box-shadow: 0 0 0 0.2rem rgba(7,137,48,0.15); }
-        .btn-login { background: linear-gradient(135deg, #078930, #006B3F); border: none; padding: 12px; font-size: 1rem; font-weight: 600; letter-spacing: 0.5px; }
-        .btn-login:hover { background: linear-gradient(135deg, #006B3F, #004d2d); }
+        body {
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 60%, #112240 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            max-width: 440px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(135deg, {{ company.primary_color|default:'#006B3F' }}, color-mix(in srgb, {{ company.primary_color|default:'#006B3F' }} 70%, black));
+            padding: 30px;
+            text-align: center;
+        }
+        .flag-strip {
+            height: 5px;
+            background: {{ company.flag_stripe_css }};
+        }
+        .form-control:focus {
+            border-color: {{ company.primary_color|default:'#006B3F' }};
+            box-shadow: 0 0 0 0.2rem {{ company.primary_color|default:'#006B3F' }}33;
+        }
+        .btn-login {
+            background: {{ company.primary_color|default:'#006B3F' }};
+            border: none;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .btn-login:hover {
+            background: color-mix(in srgb, {{ company.primary_color|default:'#006B3F' }} 80%, black);
+        }
     </style>
 </head>
 <body>
 <div class="login-card">
     <div class="flag-strip"></div>
     <div class="login-header">
-        <div class="mb-2">
-            <div style="width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+        <div class="mb-3">
+            {% if company.logo %}
+            <img src="{{ company.logo.url }}" alt="{{ company.name }}" style="max-height:60px;max-width:200px;object-fit:contain;">
+            {% elif company.logo_icon %}
+            <img src="{{ company.logo_icon.url }}" alt="{{ company.name }}" style="width:60px;height:60px;border-radius:12px;object-fit:cover;">
+            {% else %}
+            <div style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">
                 <i class="bi bi-capsule text-white" style="font-size:2rem;"></i>
             </div>
+            {% endif %}
         </div>
-        <h4 class="text-white fw-bold mb-1">MediWholesale Ethiopia</h4>
-        <small class="text-white-50">Medical Equipment & Medicine Wholesale System</small>
+        <h4 class="text-white fw-bold mb-1">{{ company.name }}</h4>
+        <small class="text-white-50">{{ company.tagline }}</small>
     </div>
     <div class="p-4">
         {% if messages %}
@@ -54,12 +92,14 @@
                     {{ form.password }}
                 </div>
             </div>
-            <button type="submit" class="btn btn-login btn-success text-white w-100">
+            <button type="submit" class="btn btn-login text-white w-100">
                 <i class="bi bi-box-arrow-in-right me-2"></i>Login
             </button>
         </form>
         <div class="text-center mt-3">
-            <small class="text-muted">Default: admin / admin123</small>
+            <small class="text-muted">
+                {{ company.regulatory_body }} Compliant &nbsp;|&nbsp; {{ company.country }}
+            </small>
         </div>
     </div>
     <div class="flag-strip"></div>

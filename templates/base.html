@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+{% load static %}
+<html lang="{{ company.language_code|default:'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MediWholesale Ethiopia{% endblock %}</title>
+    <title>{% block title %}{{ company.name }}{% endblock %}</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -11,24 +12,48 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <!-- Custom CSS -->
-    {% load static %}
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-    <style>body { font-family: 'Segoe UI', system-ui, sans-serif; }</style>
+    <!-- Dynamic company brand colors -->
+    <style>
+        :root {
+            --et-green:  {{ company.primary_color|default:'#006B3F' }};
+            --et-yellow: {{ company.secondary_color|default:'#FCDD09' }};
+            --et-red:    {{ company.accent_color|default:'#EF2B2D' }};
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .btn-primary { background: var(--et-green); border-color: var(--et-green); }
+        .btn-primary:hover, .btn-primary:focus { background: color-mix(in srgb, var(--et-green) 80%, black); border-color: color-mix(in srgb, var(--et-green) 80%, black); }
+        .btn-outline-primary { color: var(--et-green); border-color: var(--et-green); }
+        .btn-outline-primary:hover { background: var(--et-green); border-color: var(--et-green); }
+        .form-control:focus, .form-select:focus { border-color: var(--et-green); box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--et-green) 20%, transparent); }
+        .page-item.active .page-link { background-color: var(--et-green); border-color: var(--et-green); }
+        .page-link { color: var(--et-green); }
+        .breadcrumb-item a { color: var(--et-green); }
+        .sidebar .nav-link.active { background: linear-gradient(135deg, var(--et-green), color-mix(in srgb, var(--et-green) 80%, white)); }
+        .sidebar-brand .brand-icon { background: linear-gradient(135deg, var(--et-green), color-mix(in srgb, var(--et-green) 70%, white)); }
+        .flag-strip { height: 4px; background: {{ company.flag_stripe_css }}; }
+        .text-brand { color: var(--et-green) !important; }
+        .bg-brand { background: var(--et-green) !important; }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 {% if user.is_authenticated %}
 <!-- Sidebar -->
-<nav class="sidebar" id="sidebar">
+<nav class="sidebar{% if not company.sidebar_dark %} sidebar-light{% endif %}" id="sidebar">
     <div class="flag-strip"></div>
     <div class="sidebar-brand">
         <div class="d-flex align-items-center gap-2">
-            <div style="background:#078930;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+            {% if company.logo_icon %}
+            <img src="{{ company.logo_icon.url }}" alt="{{ company.short_name }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+            {% else %}
+            <div class="brand-icon" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                 <i class="bi bi-capsule text-white" style="font-size:1.2rem;"></i>
             </div>
+            {% endif %}
             <div>
-                <h5>MediWholesale</h5>
-                <small>Ethiopia</small>
+                <h5 style="color:#fff;font-weight:700;font-size:0.95rem;margin:0;line-height:1.2;">{{ company.short_name }}</h5>
+                <small style="color:rgba(255,255,255,0.5);font-size:0.7rem;">{{ company.country }}</small>
             </div>
         </div>
     </div>
@@ -69,9 +94,11 @@
         <a href="{% url 'supplier_list' %}" class="nav-link {% if 'supplier' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-truck"></i> Suppliers
         </a>
+        {% if company.enable_multi_warehouse %}
         <a href="{% url 'warehouse_list' %}" class="nav-link {% if 'warehouse' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-building"></i> Warehouses
         </a>
+        {% endif %}
 
         <div class="sidebar-heading">Orders</div>
         <a href="{% url 'sales_order_list' %}" class="nav-link {% if 'sales_order' in request.resolver_match.url_name %}active{% endif %}">
@@ -80,9 +107,11 @@
         <a href="{% url 'purchase_order_list' %}" class="nav-link {% if 'purchase_order' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-cart-plus"></i> Purchase Orders
         </a>
+        {% if company.enable_multi_warehouse %}
         <a href="{% url 'transfer_list' %}" class="nav-link {% if 'transfer' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-shuffle"></i> Stock Transfers
         </a>
+        {% endif %}
 
         <div class="sidebar-heading">Finance</div>
         <a href="{% url 'invoice_list' %}" class="nav-link {% if 'invoice' in request.resolver_match.url_name %}active{% endif %}">
@@ -107,12 +136,15 @@
         </a>
 
         {% if user.role == 'admin' or user.is_superuser %}
-        <div class="sidebar-heading">Admin</div>
+        <div class="sidebar-heading">Administration</div>
+        <a href="{% url 'company_settings' %}" class="nav-link {% if 'company_settings' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-gear-wide-connected"></i> Company Settings
+        </a>
         <a href="{% url 'user_list' %}" class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-people"></i> Users
         </a>
         <a href="/admin/" class="nav-link" target="_blank">
-            <i class="bi bi-gear"></i> Django Admin
+            <i class="bi bi-layout-text-sidebar"></i> Django Admin
         </a>
         {% endif %}
     </div>
@@ -123,7 +155,7 @@
     <!-- Top Navbar -->
     <div class="top-navbar">
         <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('show')">
+            <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle">
                 <i class="bi bi-list"></i>
             </button>
             <nav aria-label="breadcrumb" class="d-none d-md-block">
@@ -134,13 +166,17 @@
             </nav>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-light text-dark border">
-                <i class="bi bi-geo-alt-fill" style="color:#078930;"></i> Ethiopia | ETB
+            {% if company.logo %}
+            <img src="{{ company.logo.url }}" alt="{{ company.name }}" style="max-height:32px;max-width:120px;object-fit:contain;">
+            {% endif %}
+            <span class="badge bg-light text-dark border d-none d-md-inline-flex align-items-center gap-1">
+                <i class="bi bi-geo-alt-fill" style="color:{{ company.primary_color }};"></i>
+                {{ company.country }} | {{ company.currency }}
             </span>
             {% if user.is_authenticated %}
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
-                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:30px;height:30px;font-size:0.8rem;">
+                    <div class="rounded-circle text-white d-flex align-items-center justify-content-center" style="width:30px;height:30px;font-size:0.8rem;background:{{ company.primary_color }};">
                         {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
                     </div>
                     <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
@@ -148,6 +184,9 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><h6 class="dropdown-header">{{ user.get_role_display }}</h6></li>
                     <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
+                    {% if user.role == 'admin' or user.is_superuser %}
+                    <li><a class="dropdown-item" href="{% url 'company_settings' %}"><i class="bi bi-gear me-2"></i>Company Settings</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                 </ul>
@@ -160,7 +199,7 @@
     {% if messages %}
     <div class="px-4 pt-3">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show auto-dismiss" role="alert">
             <i class="bi bi-info-circle me-2"></i> {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>

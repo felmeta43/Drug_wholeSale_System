@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
-{% block title %}{{ title|default:"Create Sales Order" }} - MediWholesale{% endblock %}
+{% block title %}{{ title|default:"Create Sales Order" }} - {{ company.name }}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'sales_order_list' %}">Sales Orders</a></li>
@@ -11,7 +11,7 @@
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
         <h4 class="mb-1"><i class="bi bi-cart-check text-primary me-2"></i>{{ title|default:"Create Sales Order" }}</h4>
-        <small class="text-muted">VAT 15% applied automatically per Ethiopian tax law</small>
+        <small class="text-muted">{% if company.enable_vat %}{{ company.vat_label }} {{ company.vat_rate }}% applied automatically{% else %}No tax applied{% endif %}</small>
     </div>
 </div>
 
@@ -72,7 +72,7 @@
                                 <tr>
                                     <th style="min-width:280px;">Product / Medicine</th>
                                     <th style="min-width:100px;">Qty</th>
-                                    <th style="min-width:130px;">Unit Price (ETB)</th>
+                                    <th style="min-width:130px;">Unit Price ({{ company.currency }})</th>
                                     <th style="min-width:90px;">Disc %</th>
                                     <th style="min-width:130px;">Total</th>
                                     <th style="width:40px;"></th>
@@ -92,12 +92,12 @@
                                     <td>{{ item_form.quantity }}</td>
                                     <td>
                                         <div class="input-group input-group-sm">
-                                            <span class="input-group-text">Br</span>
+                                            <span class="input-group-text">{{ company.currency_symbol }}</span>
                                             {{ item_form.unit_price }}
                                         </div>
                                     </td>
                                     <td>{{ item_form.discount_percent }}</td>
-                                    <td><span class="row-total text-success fw-semibold">Br 0.00</span></td>
+                                    <td><span class="row-total text-success fw-semibold">{{ company.currency_symbol }} 0.00</span></td>
                                     <td>
                                         <label class="text-danger" style="cursor:pointer;" title="Remove">
                                             {{ item_form.DELETE }}
@@ -126,12 +126,12 @@
                                 <td><input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1" style="width:80px;"></td>
                                 <td>
                                     <div class="input-group input-group-sm">
-                                        <span class="input-group-text">Br</span>
+                                        <span class="input-group-text">{{ company.currency_symbol }}</span>
                                         <input type="number" name="items-__prefix__-unit_price" id="id_items-__prefix__-unit_price" class="form-control" step="0.01" min="0" value="0.00" style="width:100px;">
                                     </div>
                                 </td>
                                 <td><input type="number" name="items-__prefix__-discount_percent" id="id_items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0" style="width:70px;"></td>
-                                <td><span class="row-total text-success fw-semibold">Br 0.00</span></td>
+                                <td><span class="row-total text-success fw-semibold">{{ company.currency_symbol }} 0.00</span></td>
                                 <td>
                                     <label class="text-danger" style="cursor:pointer;">
                                         <input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE" style="display:none;">
@@ -157,22 +157,22 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between py-2 border-bottom">
                         <span class="text-muted">Subtotal</span>
-                        <span class="fw-semibold" id="order-subtotal">Br 0.00</span>
+                        <span class="fw-semibold" id="order-subtotal">{{ company.currency_symbol }} 0.00</span>
                     </div>
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">VAT (15%)</span>
-                        <span class="fw-semibold text-warning" id="order-vat">Br 0.00</span>
+                        <span class="text-muted">{{ company.vat_label }} ({{ company.vat_rate }}%)</span>
+                        <span class="fw-semibold text-warning" id="order-vat">{{ company.currency_symbol }} 0.00</span>
                     </div>
                     <div class="py-2 border-bottom">
-                        <label class="form-label small mb-1">Discount Amount (ETB)</label>
+                        <label class="form-label small mb-1">Discount Amount ({{ company.currency }})</label>
                         {{ form.discount_amount }}
                     </div>
                     <div class="d-flex justify-content-between py-3">
                         <span class="fw-bold fs-5">Total</span>
-                        <span class="fw-bold fs-5 text-success" id="order-total">Br 0.00</span>
+                        <span class="fw-bold fs-5 text-success" id="order-total">{{ company.currency_symbol }} 0.00</span>
                     </div>
                     <div class="alert alert-info py-2 mb-3">
-                        <small><i class="bi bi-info-circle me-1"></i>All prices in Ethiopian Birr (ETB). VAT per ERCA regulations.</small>
+                        <small><i class="bi bi-info-circle me-1"></i>All prices in {{ company.currency }}. Tax per local regulations.</small>
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" name="action" value="save" class="btn btn-primary">
@@ -188,15 +188,15 @@
                 </div>
             </div>
 
-            <!-- Ethiopian Compliance Box -->
+            <!-- Compliance -->
             <div class="card">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i>Compliance</h6>
                     <ul class="list-unstyled small text-muted mb-0">
-                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>Ethiopian VAT (15%) applied</li>
-                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>EFDA registered products</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>Ethiopian {{ company.vat_label }} ({{ company.vat_rate }}%) applied</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>{{ company.regulatory_body }} registered products</li>
                         <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>Batch tracking enabled</li>
-                        <li><i class="bi bi-check2 text-success me-1"></i>TIN verification required</li>
+                        <li><i class="bi bi-check2 text-success me-1"></i>TIN/Tax ID verification</li>
                     </ul>
                 </div>
             </div>
@@ -207,6 +207,8 @@
 
 {% block extra_js %}
 <script>
+var COMPANY_SYMBOL = '{{ company.currency_symbol|escapejs }}';
+var COMPANY_VAT_RATE = {% if company.enable_vat %}{{ company.vat_rate_decimal }}{% else %}0{% endif %};
 document.addEventListener('DOMContentLoaded', function() {
     // Attach price autofill to existing rows
     document.querySelectorAll('#salesOrderItemsBody tr.item-row').forEach(function(row) {
@@ -276,22 +278,25 @@ function updateRowTotalInline(row) {
     var price = parseFloat(row.querySelector('input[name*="unit_price"]')?.value) || 0;
     var disc = parseFloat(row.querySelector('input[name*="discount_percent"]')?.value) || 0;
     var total = qty * price * (1 - disc / 100);
+    var sym = COMPANY_SYMBOL || 'Br';
     var el = row.querySelector('.row-total');
-    if (el) el.textContent = 'Br ' + total.toFixed(2);
+    if (el) el.textContent = sym + ' ' + total.toFixed(2);
     updateOrderTotalsInline();
 }
 
 function updateOrderTotalsInline() {
+    var sym = COMPANY_SYMBOL || 'Br';
+    var vatRate = COMPANY_VAT_RATE || 0;
     var subtotal = 0;
     document.querySelectorAll('#salesOrderItemsBody tr.item-row .row-total').forEach(function(el) {
-        subtotal += parseFloat(el.textContent.replace('Br ','')) || 0;
+        subtotal += parseFloat(el.textContent.replace(sym + ' ','').replace(sym,'')) || 0;
     });
     var disc = parseFloat(document.getElementById('id_discount_amount')?.value) || 0;
-    var vat = subtotal * 0.15;
+    var vat = subtotal * vatRate;
     var total = subtotal + vat - disc;
-    document.getElementById('order-subtotal').textContent = 'Br ' + subtotal.toFixed(2);
-    document.getElementById('order-vat').textContent = 'Br ' + vat.toFixed(2);
-    document.getElementById('order-total').textContent = 'Br ' + total.toFixed(2);
+    document.getElementById('order-subtotal').textContent = sym + ' ' + subtotal.toFixed(2);
+    document.getElementById('order-vat').textContent = sym + ' ' + vat.toFixed(2);
+    document.getElementById('order-total').textContent = sym + ' ' + total.toFixed(2);
 }
 </script>
 {% endblock %}

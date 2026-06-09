@@ -38,9 +38,11 @@ class PurchaseOrder(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.po_number:
+            from core.models import CompanySettings
+            prefix = CompanySettings.get().po_prefix
             last = PurchaseOrder.objects.order_by('-id').first()
             num = (last.id + 1) if last else 1
-            self.po_number = f"PO-{datetime.date.today().strftime('%Y%m')}-{num:04d}"
+            self.po_number = f"{prefix}{datetime.date.today().strftime('%Y%m')}-{num:04d}"
         super().save(*args, **kwargs)
 
     def calculate_total(self):
@@ -114,15 +116,18 @@ class SalesOrder(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
+            from core.models import CompanySettings
+            prefix = CompanySettings.get().so_prefix
             last = SalesOrder.objects.order_by('-id').first()
             num = (last.id + 1) if last else 1
-            self.order_number = f"SO-{datetime.date.today().strftime('%Y%m')}-{num:04d}"
+            self.order_number = f"{prefix}{datetime.date.today().strftime('%Y%m')}-{num:04d}"
         super().save(*args, **kwargs)
 
     def calculate_totals(self):
-        from django.conf import settings as django_settings
+        from core.models import CompanySettings
         subtotal = sum(item.total_price for item in self.items.all())
-        vat_rate = getattr(django_settings, 'VAT_RATE', 0.15)
+        company = CompanySettings.get()
+        vat_rate = company.vat_rate_decimal if company.enable_vat else 0
         vat_amount = subtotal * vat_rate
         self.subtotal = subtotal
         self.vat_amount = vat_amount

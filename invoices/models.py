@@ -41,9 +41,11 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:
+            from core.models import CompanySettings
+            prefix = CompanySettings.get().invoice_prefix
             last = Invoice.objects.order_by('-id').first()
             num = (last.id + 1) if last else 1
-            self.invoice_number = f"INV-{datetime.date.today().strftime('%Y%m')}-{num:04d}"
+            self.invoice_number = f"{prefix}{datetime.date.today().strftime('%Y%m')}-{num:04d}"
         self.balance_due = self.total_amount - self.amount_paid
         if self.balance_due <= 0:
             self.payment_status = 'paid'
@@ -95,7 +97,7 @@ class Payment(models.Model):
         ordering = ['-payment_date']
 
     def __str__(self):
-        return f"Payment for {self.invoice.invoice_number} - ETB {self.amount}"
+        return f"Payment for {self.invoice.invoice_number} - {self.amount}"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -124,7 +126,9 @@ class CreditNote(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.credit_note_number:
+            from core.models import CompanySettings
+            prefix = CompanySettings.get().credit_note_prefix
             last = CreditNote.objects.order_by('-id').first()
             num = (last.id + 1) if last else 1
-            self.credit_note_number = f"CN-{datetime.date.today().strftime('%Y%m')}-{num:04d}"
+            self.credit_note_number = f"{prefix}{datetime.date.today().strftime('%Y%m')}-{num:04d}"
         super().save(*args, **kwargs)
