@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.order_number }} - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1">{{ order.order_number }}</h4>
+            <span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'cancelled' %}danger{% elif order.status == 'confirmed' %}info{% else %}secondary{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            {% if order.status == 'draft' %}
+            <form method="post" action="{% url 'sales_order_status' order.pk %}" class="d-inline">
+                {% csrf_token %}<input type="hidden" name="status" value="confirmed">
+                <button class="btn btn-success">Confirm Order</button>
+            </form>
+            {% elif order.status == 'confirmed' %}
+            <form method="post" action="{% url 'sales_order_status' order.pk %}" class="d-inline">
+                {% csrf_token %}<input type="hidden" name="status" value="delivered">
+                <button class="btn btn-info">Mark Delivered</button>
+            </form>
+            <a href="{% url 'generate_invoice' order.pk %}" class="btn btn-warning">Generate Invoice</a>
+            {% elif order.status == 'delivered' %}
+            {% if not order.invoice %}
+            <a href="{% url 'generate_invoice' order.pk %}" class="btn btn-warning">Generate Invoice</a>
+            {% else %}
+            <a href="{% url 'invoice_detail' order.invoice.pk %}" class="btn btn-outline-primary">View Invoice</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Order Information</h6></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><th>Customer</th><td><a href="{% url 'customer_detail' order.customer.pk %}">{{ order.customer.name }}</a></td></tr>
+                    <tr><th>Warehouse</th><td>{{ order.warehouse.name }}</td></tr>
+                    <tr><th>Order Date</th><td>{{ order.order_date }}</td></tr>
+                    <tr><th>Delivery Date</th><td>{{ order.delivery_date|default:"-" }}</td></tr>
+                    <tr><th>Payment Terms</th><td>{{ order.payment_terms }} days</td></tr>
+                    <tr><th>Created By</th><td>{{ order.created_by|default:"-" }}</td></tr>
+                    <tr><th>Subtotal</th><td>ETB {{ order.subtotal|floatformat:2 }}</td></tr>
+                    <tr><th>Discount</th><td>ETB {{ order.discount_amount|floatformat:2 }}</td></tr>
+                    <tr><th>VAT (15%)</th><td>ETB {{ order.vat_amount|floatformat:2 }}</td></tr>
+                    <tr><th class="text-success">Total Amount</th><td class="fw-bold text-success fs-5">ETB {{ order.total_amount|floatformat:2 }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Order Items</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Product</th><th>Batch</th><th>Qty</th><th>Unit Price</th><th>Disc%</th><th>VAT%</th><th>Total</th><th>Delivered</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.product_variant }}</td>
+                                <td><small>{{ item.batch.batch_number|default:"-" }}</small></td>
+                                <td>{{ item.quantity }}</td>
+                                <td>ETB {{ item.unit_price|floatformat:2 }}</td>
+                                <td>{{ item.discount_percent }}%</td>
+                                <td>{{ item.vat_rate }}%</td>
+                                <td>ETB {{ item.total_price|floatformat:2 }}</td>
+                                <td>{{ item.delivered_quantity }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="8" class="text-center text-muted py-3">No items.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr><th colspan="6" class="text-end">Total (incl. VAT):</th><th colspan="2">ETB {{ order.total_amount|floatformat:2 }}</th></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

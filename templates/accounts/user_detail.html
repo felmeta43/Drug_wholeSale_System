@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}User Detail - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-person me-2 text-primary"></i>{{ user_obj.get_full_name|default:user_obj.username }}</h4>
+        <a href="{% url 'user_update' user_obj.pk %}" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Edit</a>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Profile Information</h6></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><th>Username</th><td>{{ user_obj.username }}</td></tr>
+                    <tr><th>Full Name</th><td>{{ user_obj.get_full_name|default:"-" }}</td></tr>
+                    <tr><th>Email</th><td>{{ user_obj.email|default:"-" }}</td></tr>
+                    <tr><th>Role</th><td><span class="badge bg-{{ user_obj.get_role_display_badge }}">{{ user_obj.get_role_display }}</span></td></tr>
+                    <tr><th>Phone</th><td>{{ user_obj.phone|default:"-" }}</td></tr>
+                    <tr><th>Region</th><td>{{ user_obj.get_region_display|default:"-" }}</td></tr>
+                    <tr><th>Woreda</th><td>{{ user_obj.woreda|default:"-" }}</td></tr>
+                    <tr><th>Status</th><td>{% if user_obj.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td></tr>
+                    <tr><th>Date Joined</th><td>{{ user_obj.date_joined }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

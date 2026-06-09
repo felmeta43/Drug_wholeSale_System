@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if object %}Edit Customer{% else %}Add Customer{% endif %} - MediWholesale{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'customer_list' %}">Customers</a></li>
+<li class="breadcrumb-item active">{% if object %}Edit{% else %}Add{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-hospital me-2 text-primary"></i>{% if object %}Edit Customer: {{ object.name }}{% else %}Add New Customer{% endif %}</h4>
+</div>
+<div class="card table-card">
+    <div class="card-body">{% crispy form %}</div>
+</div>
+{% endblock %}

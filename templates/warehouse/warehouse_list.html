@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Warehouses - MediWholesale{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Warehouses</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-building me-2 text-primary"></i>Warehouses</h4>
+        <a href="{% url 'warehouse_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Warehouse</a>
+    </div>
+</div>
+<div class="row g-4">
+    {% for wh in warehouses %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1">{{ wh.name }}</h5>
+                        <span class="badge bg-secondary">{{ wh.code }}</span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <a href="{% url 'warehouse_detail' wh.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                        <a href="{% url 'warehouse_update' wh.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    </div>
+                </div>
+                <p class="text-muted small mb-2">{{ wh.city }}, {{ wh.region }}</p>
+                {% if wh.manager %}<p class="small mb-2"><i class="bi bi-person me-1"></i>{{ wh.manager }}</p>{% endif %}
+                {% if wh.has_cold_storage %}<span class="badge bg-info mb-2"><i class="bi bi-snow me-1"></i>Cold Storage</span>{% endif %}
+                <div class="row g-2 mt-2">
+                    <div class="col-6">
+                        <div class="bg-light rounded p-2 text-center">
+                            <div class="small text-muted">Total Items</div>
+                            <div class="fw-bold">{{ wh.total_items|default:0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-light rounded p-2 text-center">
+                            <div class="small text-muted">Value</div>
+                            <div class="fw-bold text-success small">{{ wh.total_value|default:0|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5 text-muted">
+        <i class="bi bi-building fs-1 d-block mb-3"></i>
+        <p>No warehouses yet. <a href="{% url 'warehouse_create' %}">Add your first warehouse</a></p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

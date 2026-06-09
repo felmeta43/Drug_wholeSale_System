@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}{{ transfer.transfer_number }} - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1">{{ transfer.transfer_number }}</h4>
+            <span class="badge bg-{% if transfer.status == 'completed' %}success{% elif transfer.status == 'cancelled' %}danger{% elif transfer.status == 'in_transit' %}info{% else %}warning text-dark{% endif %}">{{ transfer.get_status_display }}</span>
+        </div>
+        {% if transfer.status == 'pending' %}
+        <a href="{% url 'complete_transfer' transfer.pk %}" class="btn btn-success">Mark as In Transit / Receive</a>
+        {% elif transfer.status == 'in_transit' %}
+        <a href="{% url 'complete_transfer' transfer.pk %}" class="btn btn-success">Receive Items</a>
+        {% endif %}
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Transfer Information</h6></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><th>From Warehouse</th><td>{{ transfer.from_warehouse.name }}</td></tr>
+                    <tr><th>To Warehouse</th><td>{{ transfer.to_warehouse.name }}</td></tr>
+                    <tr><th>Transfer Date</th><td>{{ transfer.transfer_date }}</td></tr>
+                    <tr><th>Received Date</th><td>{{ transfer.received_date|default:"-" }}</td></tr>
+                    <tr><th>Created By</th><td>{{ transfer.created_by|default:"-" }}</td></tr>
+                    <tr><th>Received By</th><td>{{ transfer.received_by|default:"-" }}</td></tr>
+                </table>
+                {% if transfer.notes %}<p class="text-muted small">{{ transfer.notes }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Transfer Items</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light"><tr><th>Product</th><th>Batch</th><th>Sent</th><th>Received</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.product_variant }}</td>
+                                <td><small class="font-monospace">{{ item.batch.batch_number }}</small></td>
+                                <td>{{ item.quantity_sent }}</td>
+                                <td>{{ item.quantity_received }}</td>
+                                <td><small>{{ item.notes|default:"-" }}</small></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No items.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

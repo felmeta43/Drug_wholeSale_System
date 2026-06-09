@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Sales Report - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-bar-chart me-2 text-primary"></i>Sales Report</h4>
+        <div class="btn-group">
+            <a href="?period=daily" class="btn btn-sm {% if period == 'daily' %}btn-primary{% else %}btn-outline-primary{% endif %}">Today</a>
+            <a href="?period=weekly" class="btn btn-sm {% if period == 'weekly' %}btn-primary{% else %}btn-outline-primary{% endif %}">This Week</a>
+            <a href="?period=monthly" class="btn btn-sm {% if period == 'monthly' %}btn-primary{% else %}btn-outline-primary{% endif %}">This Month</a>
+            <a href="?period=yearly" class="btn btn-sm {% if period == 'yearly' %}btn-primary{% else %}btn-outline-primary{% endif %}">This Year</a>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-success border-4">
+            <div class="card-body">
+                <div class="text-muted small">Total Revenue</div>
+                <div class="fs-2 fw-bold text-success">ETB {{ total_revenue|floatformat:2 }}</div>
+                <small class="text-muted">From {{ start_date }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-warning border-4">
+            <div class="card-body">
+                <div class="text-muted small">Total VAT Collected</div>
+                <div class="fs-2 fw-bold text-warning">ETB {{ total_vat|floatformat:2 }}</div>
+                <small class="text-muted">15% VAT</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-info border-4">
+            <div class="card-body">
+                <div class="text-muted small">Total Orders</div>
+                <div class="fs-2 fw-bold text-info">{{ total_orders }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-md-5">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Top Customers</h6></div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for c in top_customers %}
+                    <div class="list-group-item border-0 px-3 py-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="small fw-semibold">{{ c.customer__name|default:"Unknown" }}</div>
+                                <small class="text-muted">{{ c.count }} orders</small>
+                            </div>
+                            <div class="text-success fw-bold small">ETB {{ c.total|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item border-0 text-center text-muted py-3">No data.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Recent Orders</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light"><tr><th>Order #</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td><a href="{% url 'sales_order_detail' order.pk %}">{{ order.order_number }}</a></td>
+                                <td>{{ order.customer.name|truncatechars:20 }}</td>
+                                <td>{{ order.order_date }}</td>
+                                <td>ETB {{ order.total_amount|floatformat:0 }}</td>
+                                <td><span class="badge bg-{% if order.status == 'delivered' %}success{% else %}secondary{% endif %}">{{ order.get_status_display }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No orders in this period.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

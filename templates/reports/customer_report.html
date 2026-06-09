@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Customer Report - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-people me-2 text-primary"></i>Customer Report</h4>
+</div>
+<div class="card table-card mb-4">
+    <div class="card-body">
+        <div class="text-muted small mb-1">Total Active Customers</div>
+        <div class="fs-3 fw-bold">{{ total_customers }}</div>
+    </div>
+</div>
+<div class="card table-card">
+    <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Top Customers by Revenue</h6></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Customer</th><th>Type</th><th>Region</th><th>Total Orders</th><th>Total Revenue</th></tr></thead>
+                <tbody>
+                    {% for cust in customers %}
+                    <tr>
+                        <td><a href="{% url 'customer_detail' cust.pk %}" class="fw-semibold text-decoration-none">{{ cust.name }}</a></td>
+                        <td>{{ cust.get_customer_type_display }}</td>
+                        <td>{{ cust.get_region_display|default:"-" }}</td>
+                        <td>{{ cust.total_orders|default:0 }}</td>
+                        <td>ETB {{ cust.total_revenue|default:0|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No customers.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

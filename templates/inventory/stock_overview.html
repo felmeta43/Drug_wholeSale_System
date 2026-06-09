@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Stock Overview - MediWholesale{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Stock Overview</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-archive me-2 text-primary"></i>Stock Overview</h4>
+        <div class="d-flex gap-2">
+            <a href="{% url 'batch_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Stock</a>
+            <a href="{% url 'stock_adjustment' %}" class="btn btn-outline-warning"><i class="bi bi-sliders me-1"></i>Adjust</a>
+        </div>
+    </div>
+</div>
+<!-- Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-success border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Total Stock Value</div>
+                <div class="fs-3 fw-bold text-success">ETB {{ total_value|floatformat:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-warning border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Expiring Soon (90 days)</div>
+                <div class="fs-3 fw-bold text-warning">{{ expiring_count }} batches</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-danger border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Expired Batches</div>
+                <div class="fs-3 fw-bold text-danger">{{ expired_count }} batches</div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Filters -->
+<div class="card table-card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search product or batch..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="warehouse" class="form-select">
+                    <option value="">All Warehouses</option>
+                    {% for wh in warehouses %}
+                    <option value="{{ wh.pk }}" {% if request.GET.warehouse == wh.pk|stringformat:"s" %}selected{% endif %}>{{ wh.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="expiry" class="form-select">
+                    <option value="">All Batches</option>
+                    <option value="expiring_soon" {% if request.GET.expiry == 'expiring_soon' %}selected{% endif %}>Expiring Soon (90d)</option>
+                    <option value="expired" {% if request.GET.expiry == 'expired' %}selected{% endif %}>Expired</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="card table-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Product</th><th>Warehouse</th><th>Batch #</th><th>Qty Available</th><th>Expiry Date</th><th>Days Left</th><th>Purchase Price</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                    <tr class="{% if batch.is_expired %}table-danger{% elif batch.is_expiring_soon %}table-warning{% endif %}">
+                        <td>
+                            <div class="fw-semibold">{{ batch.product_variant.product.name|truncatechars:30 }}</div>
+                            <small class="text-muted">{{ batch.product_variant.strength }}</small>
+                        </td>
+                        <td><small>{{ batch.warehouse.name }}</small></td>
+                        <td><small class="font-monospace">{{ batch.batch_number }}</small></td>
+                        <td>
+                            <span class="badge {% if batch.quantity_available == 0 %}bg-danger{% elif batch.quantity_available <= 10 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ batch.quantity_available }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if batch.expiry_date %}
+                            {{ batch.expiry_date }}
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td>
+                            {% with days=batch.days_to_expiry %}
+                            {% if days is not None %}
+                                {% if days < 0 %}<span class="badge bg-danger">Expired</span>
+                                {% elif days <= 30 %}<span class="badge bg-danger">{{ days }}d</span>
+                                {% elif days <= 90 %}<span class="badge bg-warning text-dark">{{ days }}d</span>
+                                {% else %}<span class="text-muted small">{{ days }}d</span>{% endif %}
+                            {% else %}-{% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>ETB {{ batch.purchase_price|floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'batch_detail' batch.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                            <a href="{% url 'batch_update' batch.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No stock batches found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Create Invoice - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-receipt me-2 text-primary"></i>Create Invoice</h4>
+</div>
+<div class="card table-card">
+    <div class="card-body">{% crispy form %}</div>
+</div>
+{% endblock %}

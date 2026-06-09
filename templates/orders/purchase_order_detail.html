@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.po_number }} - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1">{{ order.po_number }}</h4>
+            <span class="badge bg-{% if order.status == 'received' %}success{% elif order.status == 'cancelled' %}danger{% elif order.status == 'approved' %}info{% else %}secondary{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            {% if order.status == 'draft' %}
+            <form method="post" action="{% url 'purchase_order_status' order.pk %}" class="d-inline">
+                {% csrf_token %}<input type="hidden" name="status" value="submitted">
+                <button type="submit" class="btn btn-warning">Submit for Approval</button>
+            </form>
+            {% elif order.status == 'submitted' %}
+            <form method="post" action="{% url 'purchase_order_status' order.pk %}" class="d-inline">
+                {% csrf_token %}<input type="hidden" name="status" value="approved">
+                <button type="submit" class="btn btn-success">Approve</button>
+            </form>
+            {% elif order.status == 'approved' %}
+            <a href="{% url 'receive_purchase_order' order.pk %}" class="btn btn-primary">Receive Items</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Order Information</h6></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><th>Supplier</th><td>{{ order.supplier.name }}</td></tr>
+                    <tr><th>Warehouse</th><td>{{ order.warehouse.name }}</td></tr>
+                    <tr><th>Order Date</th><td>{{ order.order_date }}</td></tr>
+                    <tr><th>Expected Delivery</th><td>{{ order.expected_delivery_date|default:"-" }}</td></tr>
+                    <tr><th>Received Date</th><td>{{ order.received_date|default:"-" }}</td></tr>
+                    <tr><th>Created By</th><td>{{ order.created_by|default:"-" }}</td></tr>
+                    <tr><th>Approved By</th><td>{{ order.approved_by|default:"-" }}</td></tr>
+                    <tr><th>Total Amount</th><td class="fw-bold text-success">ETB {{ order.total_amount|floatformat:2 }}</td></tr>
+                </table>
+                {% if order.notes %}
+                <div class="mt-2"><strong>Notes:</strong><p class="small text-muted">{{ order.notes }}</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card table-card">
+            <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Order Items</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Discount</th><th>Total</th><th>Received</th><th>Batch</th><th>Expiry</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.product_variant }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>ETB {{ item.unit_price|floatformat:2 }}</td>
+                                <td>{{ item.discount_percent }}%</td>
+                                <td>ETB {{ item.total_price|floatformat:2 }}</td>
+                                <td>{{ item.received_quantity }}</td>
+                                <td><small>{{ item.batch_number|default:"-" }}</small></td>
+                                <td><small>{{ item.expiry_date|default:"-" }}</small></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="8" class="text-center text-muted py-3">No items.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4" class="text-end">Total:</th>
+                                <th>ETB {{ order.total_amount|floatformat:2 }}</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title|default:"Create Sales Order" }} - MediWholesale{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'sales_order_list' %}">Sales Orders</a></li>
+<li class="breadcrumb-item active">{{ title|default:"Create" }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-cart-check text-primary me-2"></i>{{ title|default:"Create Sales Order" }}</h4>
+        <small class="text-muted">VAT 15% applied automatically per Ethiopian tax law</small>
+    </div>
+</div>
+
+<form method="post" id="salesOrderForm">
+    {% csrf_token %}
+    <div class="row g-4">
+        <!-- Order Details -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-info-circle me-2"></i>Order Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Customer <span class="text-danger">*</span></label>
+                            {{ form.customer }}
+                            {% if form.customer.errors %}<div class="text-danger small">{{ form.customer.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Warehouse <span class="text-danger">*</span></label>
+                            {{ form.warehouse }}
+                            {% if form.warehouse.errors %}<div class="text-danger small">{{ form.warehouse.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Order Date</label>
+                            {{ form.order_date }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Delivery Date</label>
+                            {{ form.delivery_date }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Payment Terms (days)</label>
+                            {{ form.payment_terms }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Order Items</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="addSalesOrderItem">
+                        <i class="bi bi-plus-lg me-1"></i>Add Item
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {{ formset.management_form }}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="min-width:280px;">Product / Medicine</th>
+                                    <th style="min-width:100px;">Qty</th>
+                                    <th style="min-width:130px;">Unit Price (ETB)</th>
+                                    <th style="min-width:90px;">Disc %</th>
+                                    <th style="min-width:130px;">Total</th>
+                                    <th style="width:40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesOrderItemsBody">
+                                {% for item_form in formset %}
+                                <tr class="item-row order-item-row">
+                                    {{ item_form.id }}
+                                    {{ item_form.batch }}
+                                    <td>
+                                        {{ item_form.product_variant }}
+                                        {% if item_form.product_variant.errors %}
+                                        <div class="text-danger small">{{ item_form.product_variant.errors }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item_form.quantity }}</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">Br</span>
+                                            {{ item_form.unit_price }}
+                                        </div>
+                                    </td>
+                                    <td>{{ item_form.discount_percent }}</td>
+                                    <td><span class="row-total text-success fw-semibold">Br 0.00</span></td>
+                                    <td>
+                                        <label class="text-danger" style="cursor:pointer;" title="Remove">
+                                            {{ item_form.DELETE }}
+                                            <i class="bi bi-trash3"></i>
+                                        </label>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Hidden empty row template -->
+                    <table style="display:none;">
+                        <tbody>
+                            <tr class="item-row order-item-row" id="empty-sales-item-row">
+                                <input type="hidden" name="items-__prefix__-id" id="id_items-__prefix__-id">
+                                <input type="hidden" name="items-__prefix__-batch" id="id_items-__prefix__-batch">
+                                <td>
+                                    <select name="items-__prefix__-product_variant" id="id_items-__prefix__-product_variant" class="form-select form-select-sm">
+                                        <option value="">-- Select Product --</option>
+                                        {% for v in variants %}
+                                        <option value="{{ v.pk }}" data-price="{{ v.selling_price }}">{{ v }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1" style="width:80px;"></td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Br</span>
+                                        <input type="number" name="items-__prefix__-unit_price" id="id_items-__prefix__-unit_price" class="form-control" step="0.01" min="0" value="0.00" style="width:100px;">
+                                    </div>
+                                </td>
+                                <td><input type="number" name="items-__prefix__-discount_percent" id="id_items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0" style="width:70px;"></td>
+                                <td><span class="row-total text-success fw-semibold">Br 0.00</span></td>
+                                <td>
+                                    <label class="text-danger" style="cursor:pointer;">
+                                        <input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE" style="display:none;">
+                                        <i class="bi bi-trash3" onclick="this.closest('tr').remove(); updateOrderTotals();"></i>
+                                    </label>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="p-3 text-center text-muted small" id="emptyItemsMsg" style="display:none;">
+                        No items added yet. Click "Add Item" to start.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="card mb-4 sticky-top" style="top:80px;">
+                <div class="card-header bg-transparent">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-calculator me-2"></i>Order Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Subtotal</span>
+                        <span class="fw-semibold" id="order-subtotal">Br 0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">VAT (15%)</span>
+                        <span class="fw-semibold text-warning" id="order-vat">Br 0.00</span>
+                    </div>
+                    <div class="py-2 border-bottom">
+                        <label class="form-label small mb-1">Discount Amount (ETB)</label>
+                        {{ form.discount_amount }}
+                    </div>
+                    <div class="d-flex justify-content-between py-3">
+                        <span class="fw-bold fs-5">Total</span>
+                        <span class="fw-bold fs-5 text-success" id="order-total">Br 0.00</span>
+                    </div>
+                    <div class="alert alert-info py-2 mb-3">
+                        <small><i class="bi bi-info-circle me-1"></i>All prices in Ethiopian Birr (ETB). VAT per ERCA regulations.</small>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="action" value="save" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Save as Draft
+                        </button>
+                        <button type="submit" name="action" value="confirm" class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i>Save & Confirm
+                        </button>
+                        <a href="{% url 'sales_order_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x me-1"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ethiopian Compliance Box -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i>Compliance</h6>
+                    <ul class="list-unstyled small text-muted mb-0">
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>Ethiopian VAT (15%) applied</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>EFDA registered products</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-1"></i>Batch tracking enabled</li>
+                        <li><i class="bi bi-check2 text-success me-1"></i>TIN verification required</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach price autofill to existing rows
+    document.querySelectorAll('#salesOrderItemsBody tr.item-row').forEach(function(row) {
+        attachPriceAutoFillInline(row);
+    });
+
+    // Re-calculate totals for pre-filled rows
+    document.querySelectorAll('#salesOrderItemsBody tr.item-row').forEach(function(row) {
+        updateRowTotalInline(row);
+    });
+
+    // Add item button
+    document.getElementById('addSalesOrderItem').addEventListener('click', function() {
+        var tbody = document.getElementById('salesOrderItemsBody');
+        var emptyRow = document.getElementById('empty-sales-item-row');
+        var total = parseInt(document.getElementById('id_items-TOTAL_FORMS').value);
+
+        var newRow = emptyRow.cloneNode(true);
+        newRow.id = '';
+        newRow.style.display = '';
+        newRow.querySelectorAll('[name],[id]').forEach(function(el) {
+            if (el.name) el.name = el.name.replace('__prefix__', total);
+            if (el.id) el.id = el.id.replace('__prefix__', total);
+        });
+        tbody.appendChild(newRow);
+        document.getElementById('id_items-TOTAL_FORMS').value = total + 1;
+        attachPriceAutoFillInline(newRow);
+    });
+
+    // Discount updates total
+    var discountInput = document.getElementById('id_discount_amount');
+    if (discountInput) discountInput.addEventListener('input', updateOrderTotalsInline);
+});
+
+function attachPriceAutoFillInline(row) {
+    var sel = row.querySelector('select[name*="product_variant"]');
+    if (sel) {
+        sel.addEventListener('change', function() {
+            var opt = this.options[this.selectedIndex];
+            if (opt && opt.dataset.price) {
+                var priceInput = row.querySelector('input[name*="unit_price"]');
+                if (priceInput) {
+                    priceInput.value = opt.dataset.price;
+                    updateRowTotalInline(row);
+                }
+            } else if (this.value) {
+                fetch('/products/api/variant-price/' + this.value + '/')
+                    .then(r => r.json())
+                    .then(function(d) {
+                        var priceInput = row.querySelector('input[name*="unit_price"]');
+                        if (priceInput && d.selling_price) {
+                            priceInput.value = d.selling_price;
+                            updateRowTotalInline(row);
+                        }
+                    });
+            }
+        });
+    }
+    ['input[name*="quantity"]','input[name*="unit_price"]','input[name*="discount_percent"]'].forEach(function(s) {
+        var inp = row.querySelector(s);
+        if (inp) inp.addEventListener('input', function() { updateRowTotalInline(row); });
+    });
+}
+
+function updateRowTotalInline(row) {
+    var qty = parseFloat(row.querySelector('input[name*="quantity"]')?.value) || 0;
+    var price = parseFloat(row.querySelector('input[name*="unit_price"]')?.value) || 0;
+    var disc = parseFloat(row.querySelector('input[name*="discount_percent"]')?.value) || 0;
+    var total = qty * price * (1 - disc / 100);
+    var el = row.querySelector('.row-total');
+    if (el) el.textContent = 'Br ' + total.toFixed(2);
+    updateOrderTotalsInline();
+}
+
+function updateOrderTotalsInline() {
+    var subtotal = 0;
+    document.querySelectorAll('#salesOrderItemsBody tr.item-row .row-total').forEach(function(el) {
+        subtotal += parseFloat(el.textContent.replace('Br ','')) || 0;
+    });
+    var disc = parseFloat(document.getElementById('id_discount_amount')?.value) || 0;
+    var vat = subtotal * 0.15;
+    var total = subtotal + vat - disc;
+    document.getElementById('order-subtotal').textContent = 'Br ' + subtotal.toFixed(2);
+    document.getElementById('order-vat').textContent = 'Br ' + vat.toFixed(2);
+    document.getElementById('order-total').textContent = 'Br ' + total.toFixed(2);
+}
+</script>
+{% endblock %}

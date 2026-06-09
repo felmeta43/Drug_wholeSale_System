@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Medicine Details - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-capsule me-2 text-success"></i>{% if object %}Edit Medicine Details{% else %}Add Medicine Details{% endif %}</h4>
+</div>
+<div class="card table-card">
+    <div class="card-body">{% crispy form %}</div>
+</div>
+{% endblock %}

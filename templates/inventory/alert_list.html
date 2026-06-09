@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Stock Alerts - MediWholesale{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Alerts</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-bell me-2 text-warning"></i>Stock Alerts</h4>
+</div>
+<div class="card table-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>Alert Type</th><th>Product</th><th>Warehouse</th><th>Current</th><th>Threshold</th><th>Created</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-{% if alert.alert_type == 'expired' %}danger{% elif alert.alert_type == 'expiry_warning' %}warning text-dark{% elif alert.alert_type == 'out_of_stock' %}danger{% else %}warning text-dark{% endif %}">
+                                {{ alert.get_alert_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ alert.product_variant }}</td>
+                        <td>{{ alert.warehouse.name|default:"All" }}</td>
+                        <td>{{ alert.current_value }}</td>
+                        <td>{{ alert.threshold_value }}</td>
+                        <td><small>{{ alert.created_at|date:"d M Y" }}</small></td>
+                        <td>
+                            <a href="{% url 'resolve_alert' alert.pk %}" class="btn btn-sm btn-success" onclick="return confirm('Mark as resolved?')">
+                                <i class="bi bi-check-lg"></i> Resolve
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-success py-4"><i class="bi bi-check-circle fs-3 d-block mb-2"></i>No active alerts!</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
