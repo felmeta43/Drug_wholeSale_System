@@ -38,6 +38,11 @@ class SupplierListView(LoginRequiredMixin, ListView):
         context['total_suppliers'] = Supplier.objects.filter(is_active=True).count()
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['suppliers/_supplier_results.html']
+        return [self.template_name]
+
 
 class SupplierCreateView(LoginRequiredMixin, CreateView):
     model = Supplier

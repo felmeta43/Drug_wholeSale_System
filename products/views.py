@@ -73,6 +73,11 @@ class ProductListView(LoginRequiredMixin, ListView):
         context['total_products'] = Product.objects.filter(is_active=True).count()
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['products/_product_results.html']
+        return [self.template_name]
+
 
 class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
@@ -175,6 +180,11 @@ class MedicineListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['dosage_forms'] = Medicine.DOSAGE_FORMS
         return context
+
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['products/_medicine_results.html']
+        return [self.template_name]
 
 
 class MedicineCreateView(LoginRequiredMixin, CreateView):

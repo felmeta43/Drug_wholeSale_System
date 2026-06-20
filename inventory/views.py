@@ -126,6 +126,11 @@ class StockMovementListView(LoginRequiredMixin, ListView):
         context['movement_types'] = StockMovement.MOVEMENT_TYPES
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['inventory/_movement_results.html']
+        return [self.template_name]
+
 
 @login_required
 def stock_adjustment(request):

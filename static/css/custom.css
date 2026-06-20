@@ -49,10 +49,10 @@
 /* ===== SIDEBAR ===== */
 .sidebar {
     width: var(--sidebar-width);
-    min-height: 100vh;
+    height: 100vh;
     background: linear-gradient(180deg, #0d1b2a 0%, #1b2838 50%, #112240 100%);
     position: fixed;
-    top: 0; left: 0;
+    top: 0; left: 0; bottom: 0;
     z-index: 1050;
     overflow-y: auto;
     transition: all 0.3s;
@@ -260,6 +260,12 @@
 .order-item-row { background: #fafafa; border-bottom: 1px solid #f0f0f0; }
 .order-item-row:last-child { border-bottom: none; }
 .total-row { background: #f8f9fa; font-weight: 700; }
+
+/* ===== ORDER ITEMS TABLE (fixed layout so columns never overflow the card) ===== */
+.order-items-table { table-layout: fixed; width: 100%; }
+.order-items-table th, .order-items-table td { overflow: hidden; padding: 6px 8px; vertical-align: middle; }
+.order-items-table select, .order-items-table input { width: 100%; max-width: 100%; box-sizing: border-box; }
+.order-items-table input[readonly] { background: #f1f3f5; cursor: not-allowed; }
 
 /* ===== INVOICE ===== */
 .invoice-header { background: linear-gradient(135deg, #0d1b2a, #1b2838); color: #fff; border-radius: var(--border-radius) var(--border-radius) 0 0; }

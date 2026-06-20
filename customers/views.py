@@ -41,6 +41,11 @@ class CustomerListView(LoginRequiredMixin, ListView):
         context['total_customers'] = Customer.objects.filter(is_active=True).count()
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['customers/_customer_results.html']
+        return [self.template_name]
+
 
 class CustomerCreateView(LoginRequiredMixin, CreateView):
     model = Customer

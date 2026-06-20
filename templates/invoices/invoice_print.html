@@ -17,9 +17,31 @@
         table { font-size: 12px; }
         .total-box { background: {{ company.primary_color|default:'#006B3F' }}; color: white; }
         @media print { .no-print { display: none !important; } }
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 6rem;
+            font-weight: 800;
+            letter-spacing: 0.5rem;
+            color: {{ company.primary_color|default:'#006B3F' }};
+            opacity: 0.08;
+            white-space: nowrap;
+            z-index: -1;
+            pointer-events: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
+<div class="watermark">
+    {% if invoice.payment_status == 'paid' %}PAID
+    {% elif invoice.payment_status == 'cancelled' %}CANCELLED
+    {% elif invoice.is_overdue %}OVERDUE
+    {% elif invoice.payment_status == 'partial' %}PARTIALLY PAID
+    {% else %}UNPAID{% endif %}
+</div>
 <div class="flag-strip"></div>
 <div class="header-bar">
     <div class="d-flex justify-content-between align-items-center">

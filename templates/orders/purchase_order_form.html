@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
-{% block title %}{{ title|default:"Create Purchase Order" }} - MediWholesale{% endblock %}
+{% block title %}{{ title|default:"Create Purchase Order" }} - {{ company.name }}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'purchase_order_list' %}">Purchase Orders</a></li>
@@ -60,17 +60,27 @@
                 <div class="card-body p-0">
                     {{ formset.management_form }}
                     <div class="table-responsive">
-                        <table class="table table-sm mb-0">
+                        <table class="table table-sm mb-0 order-items-table">
+                            <colgroup>
+                                <col style="width:22%;">
+                                <col style="width:7%;">
+                                <col style="width:13%;">
+                                <col style="width:7%;">
+                                <col style="width:13%;">
+                                <col style="width:13%;">
+                                <col style="width:14%;">
+                                <col style="width:5%;">
+                            </colgroup>
                             <thead class="table-light">
                                 <tr>
-                                    <th style="min-width:260px;">Product</th>
-                                    <th style="min-width:80px;">Qty</th>
-                                    <th style="min-width:130px;">Unit Cost (ETB)</th>
-                                    <th style="min-width:75px;">Disc %</th>
-                                    <th style="min-width:120px;">Batch No.</th>
-                                    <th style="min-width:130px;">Expiry Date</th>
-                                    <th style="min-width:120px;">Total</th>
-                                    <th style="width:40px;"></th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Cost ({{ company.currency_symbol }})</th>
+                                    <th>Disc %</th>
+                                    <th>Batch No.</th>
+                                    <th>Expiry</th>
+                                    <th>Total</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="purchaseOrderItemsBody">
@@ -79,16 +89,11 @@
                                     {{ item_form.id }}
                                     <td>{{ item_form.product_variant }}</td>
                                     <td>{{ item_form.quantity }}</td>
-                                    <td>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text">Br</span>
-                                            {{ item_form.unit_price }}
-                                        </div>
-                                    </td>
+                                    <td>{{ item_form.unit_price }}</td>
                                     <td>{{ item_form.discount_percent }}</td>
                                     <td>{{ item_form.batch_number }}</td>
                                     <td>{{ item_form.expiry_date }}</td>
-                                    <td><span class="po-row-total text-success fw-semibold">Br 0.00</span></td>
+                                    <td><span class="po-row-total text-success fw-semibold text-nowrap">{{ company.currency_symbol }} 0.00</span></td>
                                     <td>
                                         <label class="text-danger" style="cursor:pointer;" title="Remove">
                                             {{ item_form.DELETE }}
@@ -108,21 +113,16 @@
                                     <select name="items-__prefix__-product_variant" id="id_items-__prefix__-product_variant" class="form-select form-select-sm">
                                         <option value="">-- Select Product --</option>
                                         {% for v in variants %}
-                                        <option value="{{ v.pk }}">{{ v }}</option>
+                                        <option value="{{ v.pk }}" data-cost="{{ v.cost_price }}">{{ v }}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
-                                <td><input type="number" name="items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1" style="width:80px;"></td>
-                                <td>
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">Br</span>
-                                        <input type="number" name="items-__prefix__-unit_price" class="form-control" step="0.01" min="0" value="0.00" style="width:100px;">
-                                    </div>
-                                </td>
-                                <td><input type="number" name="items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0" style="width:70px;"></td>
-                                <td><input type="text" name="items-__prefix__-batch_number" class="form-control form-control-sm" placeholder="Batch #" style="width:110px;"></td>
-                                <td><input type="date" name="items-__prefix__-expiry_date" class="form-control form-control-sm" style="width:130px;"></td>
-                                <td><span class="po-row-total text-success fw-semibold">Br 0.00</span></td>
+                                <td><input type="number" name="items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1"></td>
+                                <td><input type="number" name="items-__prefix__-unit_price" class="form-control form-control-sm" step="0.01" min="0" value="0.00"></td>
+                                <td><input type="number" name="items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0"></td>
+                                <td><input type="text" name="items-__prefix__-batch_number" class="form-control form-control-sm" placeholder="Batch #"></td>
+                                <td><input type="date" name="items-__prefix__-expiry_date" class="form-control form-control-sm"></td>
+                                <td><span class="po-row-total text-success fw-semibold text-nowrap">{{ company.currency_symbol }} 0.00</span></td>
                                 <td>
                                     <label class="text-danger" style="cursor:pointer;">
                                         <input type="checkbox" name="items-__prefix__-DELETE" style="display:none;">
@@ -147,8 +147,8 @@
                         <span class="fw-semibold" id="po-item-count">0</span>
                     </div>
                     <div class="d-flex justify-content-between py-3">
-                        <span class="fw-bold fs-5">Total Amount (ETB)</span>
-                        <span class="fw-bold fs-5 text-success" id="po-total">Br 0.00</span>
+                        <span class="fw-bold fs-5">Total Amount ({{ company.currency }})</span>
+                        <span class="fw-bold fs-5 text-success" id="po-total">{{ company.currency_symbol }} 0.00</span>
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
@@ -167,6 +167,7 @@
 
 {% block extra_js %}
 <script>
+var PO_COMPANY_SYMBOL = '{{ company.currency_symbol|escapejs }}';
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('#purchaseOrderItemsBody tr.po-item-row').forEach(attachPORowEvents);
 
@@ -190,6 +191,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function attachPORowEvents(row) {
+    var sel = row.querySelector('select[name*="product_variant"]');
+    if (sel) {
+        sel.addEventListener('change', function() {
+            var opt = this.options[this.selectedIndex];
+            var priceInput = row.querySelector('input[name*="unit_price"]');
+            if (opt && opt.dataset.cost && priceInput && parseFloat(priceInput.value || '0') === 0) {
+                priceInput.value = opt.dataset.cost;
+                updatePORowTotal(row);
+            }
+        });
+    }
     ['input[name*="quantity"]','input[name*="unit_price"]','input[name*="discount_percent"]'].forEach(function(s) {
         var inp = row.querySelector(s);
         if (inp) inp.addEventListener('input', function() { updatePORowTotal(row); });
@@ -201,22 +213,24 @@ function updatePORowTotal(row) {
     var price = parseFloat(row.querySelector('input[name*="unit_price"]')?.value) || 0;
     var disc = parseFloat(row.querySelector('input[name*="discount_percent"]')?.value) || 0;
     var total = qty * price * (1 - disc / 100);
+    var sym = PO_COMPANY_SYMBOL || 'Br';
     var el = row.querySelector('.po-row-total');
-    if (el) el.textContent = 'Br ' + total.toFixed(2);
+    if (el) el.textContent = sym + ' ' + total.toFixed(2);
     updatePOTotal();
 }
 
 function updatePOTotal() {
+    var sym = PO_COMPANY_SYMBOL || 'Br';
     var total = 0, count = 0;
     document.querySelectorAll('#purchaseOrderItemsBody tr.po-item-row').forEach(function(row) {
         var del = row.querySelector('input[name*="DELETE"]');
         if (del && del.checked) return;
         var el = row.querySelector('.po-row-total');
-        if (el) { total += parseFloat(el.textContent.replace('Br ','')) || 0; count++; }
+        if (el) { total += parseFloat(el.textContent.replace(sym + ' ','').replace(sym,'')) || 0; count++; }
     });
     var totEl = document.getElementById('po-total');
     var cntEl = document.getElementById('po-item-count');
-    if (totEl) totEl.textContent = 'Br ' + total.toFixed(2);
+    if (totEl) totEl.textContent = sym + ' ' + total.toFixed(2);
     if (cntEl) cntEl.textContent = count;
 }
 </script>

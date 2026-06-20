@@ -33,6 +33,11 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         context['status_choices'] = PurchaseOrder.STATUS_CHOICES
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['orders/_purchase_order_results.html']
+        return [self.template_name]
+
 
 @login_required
 def purchase_order_create(request):
@@ -147,6 +152,11 @@ class SalesOrderListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['status_choices'] = SalesOrder.STATUS_CHOICES
         return context
+
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['orders/_sales_order_results.html']
+        return [self.template_name]
 
 
 @login_required

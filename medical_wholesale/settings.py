@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'invoices',
     'warehouse',
     'reports',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -62,6 +63,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 # Company settings available as {{ company }} in all templates
                 'core.context_processors.company',
+                # Unread notifications available in all templates
+                'notifications.context_processors.notifications',
             ],
         },
     },

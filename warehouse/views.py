@@ -3,10 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Sum, F
+from django.utils import timezone
 from .models import Warehouse, StockTransfer, StockTransferItem
-from .forms import WarehouseForm, StockTransferForm, StockTransferItemFormSet
+from .forms import (
+    WarehouseForm, StockTransferForm, StockTransferItemFormSet,
+    StockTransferRequestForm, StockTransferRequestItemFormSet,
+    StockTransferApproveItemFormSet, StockTransferReceiveItemFormSet,
+)
+from notifications.utils import notify
 
 
 class WarehouseListView(LoginRequiredMixin, ListView):
@@ -84,17 +90,73 @@ class StockTransferListView(LoginRequiredMixin, ListView):
 
 @login_required
 def stock_transfer_create(request):
+    """Direct/push transfer: sender already knows what they're shipping
+    (batch + quantity_sent chosen directly), so it ships immediately —
+    no separate approval step is needed on top of this. It still notifies
+    the receiver and must go through 'receiver approves received items'
+    before it's marked completed."""
     form = StockTransferForm(request.POST or None)
     formset = StockTransferItemFormSet(request.POST or None)
     if request.method == 'POST' and form.is_valid() and formset.is_valid():
+        from inventory.models import StockMovement
         transfer = form.save(commit=False)
         transfer.created_by = request.user
+        transfer.status = 'in_transit'
+        transfer.approved_by = request.user
+        transfer.approved_at = timezone.now()
+        transfer.save()
+        formset.instance = transfer
+        items = formset.save()
+
+        for item in items:
+            if item.batch and item.quantity_sent:
+                item.batch.quantity_available -= item.quantity_sent
+                item.batch.save()
+                StockMovement.objects.create(
+                    batch=item.batch,
+                    movement_type='transfer',
+                    from_warehouse=transfer.from_warehouse,
+                    to_warehouse=transfer.to_warehouse,
+                    quantity=item.quantity_sent,
+                    reference_number=transfer.transfer_number,
+                    performed_by=request.user,
+                    reason=f'Transfer {transfer.transfer_number}'
+                )
+
+        notify(
+            transfer.to_warehouse.manager,
+            f"{transfer.from_warehouse.name} is sending you a stock transfer ({transfer.transfer_number}).",
+            reverse('transfer_detail', args=[transfer.pk])
+        )
+        messages.success(request, f'Transfer {transfer.transfer_number} created and shipped.')
+        return redirect('transfer_detail', pk=transfer.pk)
+    return render(request, 'warehouse/transfer_form.html', {'form': form, 'formset': formset})
+
+
+@login_required
+def stock_transfer_request_create(request):
+    """Pull request: initiated by the RECEIVING warehouse asking the sender
+    to ship stock. Sender must approve the request (choosing batches) before
+    it ships."""
+    form = StockTransferRequestForm(request.POST or None)
+    formset = StockTransferRequestItemFormSet(request.POST or None)
+    if request.method == 'POST' and form.is_valid() and formset.is_valid():
+        transfer = form.save(commit=False)
+        transfer.created_by = request.user
+        transfer.requested_by = request.user
+        transfer.status = 'requested'
         transfer.save()
         formset.instance = transfer
         formset.save()
-        messages.success(request, f'Transfer {transfer.transfer_number} created.')
+
+        notify(
+            transfer.from_warehouse.manager,
+            f"{transfer.to_warehouse.name} requested a stock transfer ({transfer.transfer_number}).",
+            reverse('transfer_detail', args=[transfer.pk])
+        )
+        messages.success(request, f'Transfer request {transfer.transfer_number} submitted.')
         return redirect('transfer_detail', pk=transfer.pk)
-    return render(request, 'warehouse/transfer_form.html', {'form': form, 'formset': formset})
+    return render(request, 'warehouse/transfer_request_form.html', {'form': form, 'formset': formset})
 
 
 class StockTransferDetailView(LoginRequiredMixin, DetailView):
@@ -109,28 +171,75 @@ class StockTransferDetailView(LoginRequiredMixin, DetailView):
 
 
 @login_required
-def complete_transfer(request, pk):
-    transfer = get_object_or_404(StockTransfer, pk=pk)
+def stock_transfer_approve_request(request, pk):
+    """Sender approves a receiver-initiated transfer request: chooses the
+    source batch and quantity to ship for each requested item. Approving
+    ships the transfer (status -> in_transit)."""
+    transfer = get_object_or_404(StockTransfer, pk=pk, status='requested')
+    from inventory.models import StockMovement
+
+    def build_formset(data=None):
+        fs = StockTransferApproveItemFormSet(data, instance=transfer)
+        for form in fs.forms:
+            form.fields['batch'].queryset = form.fields['batch'].queryset.model.objects.filter(
+                product_variant_id=form.instance.product_variant_id,
+                warehouse=transfer.from_warehouse,
+                quantity_available__gt=0
+            )
+        return fs
+
     if request.method == 'POST':
+        formset = build_formset(request.POST)
+        if formset.is_valid():
+            items = formset.save()
+            for item in items:
+                if item.batch and item.quantity_sent:
+                    item.batch.quantity_available -= item.quantity_sent
+                    item.batch.save()
+                    StockMovement.objects.create(
+                        batch=item.batch,
+                        movement_type='transfer',
+                        from_warehouse=transfer.from_warehouse,
+                        to_warehouse=transfer.to_warehouse,
+                        quantity=item.quantity_sent,
+                        reference_number=transfer.transfer_number,
+                        performed_by=request.user,
+                        reason=f'Transfer {transfer.transfer_number}'
+                    )
+
+            transfer.status = 'in_transit'
+            transfer.approved_by = request.user
+            transfer.approved_at = timezone.now()
+            transfer.save()
+
+            notify(
+                transfer.requested_by or transfer.to_warehouse.manager,
+                f"Your transfer request {transfer.transfer_number} was approved and shipped.",
+                reverse('transfer_detail', args=[transfer.pk])
+            )
+            messages.success(request, f'Transfer {transfer.transfer_number} approved and shipped.')
+            return redirect('transfer_detail', pk=transfer.pk)
+    else:
+        formset = build_formset()
+
+    return render(request, 'warehouse/transfer_approve_request.html', {
+        'transfer': transfer,
+        'formset': formset,
+    })
+
+
+@login_required
+def complete_transfer(request, pk):
+    """Receiver approves/confirms the received items, completing the transfer."""
+    transfer = get_object_or_404(StockTransfer, pk=pk, status='in_transit')
+    formset = StockTransferReceiveItemFormSet(request.POST or None, instance=transfer)
+    if request.method == 'POST' and formset.is_valid():
         import datetime
         from inventory.models import StockBatch, StockMovement
-        for item in transfer.items.all():
-            received_qty = int(request.POST.get(f'received_{item.pk}', 0))
+        items = formset.save()
+        for item in items:
+            received_qty = item.quantity_received
             if received_qty > 0:
-                # Deduct from source batch
-                item.batch.quantity_available -= received_qty
-                item.batch.save()
-                # Create movement for outgoing
-                StockMovement.objects.create(
-                    batch=item.batch,
-                    movement_type='transfer',
-                    from_warehouse=transfer.from_warehouse,
-                    to_warehouse=transfer.to_warehouse,
-                    quantity=received_qty,
-                    reference_number=transfer.transfer_number,
-                    performed_by=request.user,
-                    reason=f'Transfer {transfer.transfer_number}'
-                )
                 # Create new batch in destination warehouse
                 new_batch = StockBatch.objects.create(
                     product_variant=item.product_variant,
@@ -154,16 +263,20 @@ def complete_transfer(request, pk):
                     performed_by=request.user,
                     reason=f'Received from transfer {transfer.transfer_number}'
                 )
-                item.quantity_received = received_qty
-                item.save()
 
         transfer.status = 'completed'
         transfer.received_date = datetime.date.today()
         transfer.received_by = request.user
         transfer.save()
+
+        notify(
+            transfer.approved_by or transfer.created_by,
+            f"{transfer.to_warehouse.name} confirmed receipt of transfer {transfer.transfer_number}.",
+            reverse('transfer_detail', args=[transfer.pk])
+        )
         messages.success(request, 'Transfer completed successfully.')
         return redirect('transfer_detail', pk=pk)
     return render(request, 'warehouse/complete_transfer.html', {
         'transfer': transfer,
-        'items': transfer.items.select_related('product_variant__product', 'batch')
+        'formset': formset,
     })

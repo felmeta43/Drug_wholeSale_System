@@ -6,6 +6,7 @@
 </div>
 <form method="post">
     {% csrf_token %}
+    {{ formset.management_form }}
     <div class="card table-card mb-4">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -14,12 +15,13 @@
                         <tr><th>Product</th><th>Batch</th><th>Sent Qty</th><th>Received Qty</th></tr>
                     </thead>
                     <tbody>
-                        {% for item in items %}
+                        {% for form in formset %}
                         <tr>
-                            <td>{{ item.product_variant }}</td>
-                            <td><small class="font-monospace">{{ item.batch.batch_number }}</small></td>
-                            <td>{{ item.quantity_sent }}</td>
-                            <td><input type="number" name="received_{{ item.pk }}" class="form-control form-control-sm" style="width:100px;" value="{{ item.quantity_sent }}" min="0" max="{{ item.quantity_sent }}"></td>
+                            {{ form.id }}
+                            <td>{{ form.instance.product_variant }}</td>
+                            <td><small class="font-monospace">{{ form.instance.batch.batch_number }}</small></td>
+                            <td>{{ form.instance.quantity_sent }}</td>
+                            <td>{{ form.quantity_received }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

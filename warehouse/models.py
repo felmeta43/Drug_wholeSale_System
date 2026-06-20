@@ -46,7 +46,8 @@ class Warehouse(models.Model):
 
 class StockTransfer(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
+        ('requested', 'Requested'),
+        ('pending', 'Pending'),       # direct/push transfer created by sender, not yet shipped — kept for backward compatibility
         ('in_transit', 'In Transit'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
@@ -63,6 +64,11 @@ class StockTransfer(models.Model):
                                     related_name='created_transfers')
     received_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                      related_name='received_transfers')
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='requested_transfers')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='approved_transfers')
+    approved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -84,11 +90,13 @@ class StockTransfer(models.Model):
 
 class StockTransferItem(models.Model):
     transfer = models.ForeignKey(StockTransfer, on_delete=models.CASCADE, related_name='items')
-    batch = models.ForeignKey('inventory.StockBatch', on_delete=models.PROTECT, related_name='transfer_items')
+    batch = models.ForeignKey('inventory.StockBatch', on_delete=models.PROTECT, related_name='transfer_items',
+                               null=True, blank=True)
     product_variant = models.ForeignKey('products.ProductVariant', on_delete=models.PROTECT,
                                          related_name='transfer_items')
-    quantity_sent = models.PositiveIntegerField()
-    quantity_received = models.PositiveIntegerField(default=0)
+    quantity_requested = models.PositiveIntegerField(default=0, blank=True)
+    quantity_sent = models.PositiveIntegerField(default=0, blank=True)
+    quantity_received = models.PositiveIntegerField(default=0, blank=True)
     notes = models.CharField(max_length=300, blank=True)
 
     class Meta:

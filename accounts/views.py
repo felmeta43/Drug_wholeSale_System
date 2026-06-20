@@ -54,6 +54,11 @@ class UserListView(LoginRequiredMixin, ListView):
         context['roles'] = UserProfile.ROLES
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['accounts/_user_results.html']
+        return [self.template_name]
+
 
 class UserCreateView(LoginRequiredMixin, CreateView):
     model = UserProfile

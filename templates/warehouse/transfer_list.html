@@ -4,7 +4,23 @@
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="bi bi-shuffle me-2 text-primary"></i>Stock Transfers</h4>
-        <a href="{% url 'transfer_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Transfer</a>
+        <div>
+            <a href="{% url 'transfer_request_create' %}" class="btn btn-outline-primary"><i class="bi bi-inbox-fill me-1"></i>Request Transfer</a>
+            <a href="{% url 'transfer_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Transfer</a>
+        </div>
+    </div>
+</div>
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small fw-semibold">Status:</label>
+            <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="">All</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
     </div>
 </div>
 <div class="card table-card">
@@ -22,14 +38,16 @@
                         <td>{{ tr.to_warehouse.name }}</td>
                         <td>{{ tr.transfer_date }}</td>
                         <td>
-                            <span class="badge bg-{% if tr.status == 'completed' %}success{% elif tr.status == 'cancelled' %}danger{% elif tr.status == 'in_transit' %}info{% else %}warning text-dark{% endif %}">
+                            <span class="badge bg-{% if tr.status == 'completed' %}success{% elif tr.status == 'cancelled' %}danger{% elif tr.status == 'in_transit' %}info{% elif tr.status == 'requested' %}secondary{% else %}warning text-dark{% endif %}">
                                 {{ tr.get_status_display }}
                             </span>
                         </td>
                         <td>{{ tr.created_by|default:"-" }}</td>
                         <td>
                             <a href="{% url 'transfer_detail' tr.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
-                            {% if tr.status == 'in_transit' %}
+                            {% if tr.status == 'requested' %}
+                            <a href="{% url 'transfer_approve_request' tr.pk %}" class="btn btn-sm btn-primary">Approve &amp; Ship</a>
+                            {% elif tr.status == 'in_transit' %}
                             <a href="{% url 'complete_transfer' tr.pk %}" class="btn btn-sm btn-success">Receive</a>
                             {% endif %}
                         </td>

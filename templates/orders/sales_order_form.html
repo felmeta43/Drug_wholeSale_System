@@ -67,15 +67,23 @@
                 <div class="card-body p-0">
                     {{ formset.management_form }}
                     <div class="table-responsive">
-                        <table class="table table-sm mb-0">
+                        <table class="table table-sm mb-0 order-items-table">
+                            <colgroup>
+                                <col style="width:36%;">
+                                <col style="width:10%;">
+                                <col style="width:18%;">
+                                <col style="width:10%;">
+                                <col style="width:18%;">
+                                <col style="width:8%;">
+                            </colgroup>
                             <thead class="table-light">
                                 <tr>
-                                    <th style="min-width:280px;">Product / Medicine</th>
-                                    <th style="min-width:100px;">Qty</th>
-                                    <th style="min-width:130px;">Unit Price ({{ company.currency }})</th>
-                                    <th style="min-width:90px;">Disc %</th>
-                                    <th style="min-width:130px;">Total</th>
-                                    <th style="width:40px;"></th>
+                                    <th>Product / Medicine</th>
+                                    <th>Qty</th>
+                                    <th>Price ({{ company.currency_symbol }})</th>
+                                    <th>Disc %</th>
+                                    <th>Total</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="salesOrderItemsBody">
@@ -90,14 +98,9 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item_form.quantity }}</td>
-                                    <td>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text">{{ company.currency_symbol }}</span>
-                                            {{ item_form.unit_price }}
-                                        </div>
-                                    </td>
+                                    <td>{{ item_form.unit_price }}</td>
                                     <td>{{ item_form.discount_percent }}</td>
-                                    <td><span class="row-total text-success fw-semibold">{{ company.currency_symbol }} 0.00</span></td>
+                                    <td><span class="row-total text-success fw-semibold text-nowrap">{{ company.currency_symbol }} 0.00</span></td>
                                     <td>
                                         <label class="text-danger" style="cursor:pointer;" title="Remove">
                                             {{ item_form.DELETE }}
@@ -123,15 +126,10 @@
                                         {% endfor %}
                                     </select>
                                 </td>
-                                <td><input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1" style="width:80px;"></td>
-                                <td>
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">{{ company.currency_symbol }}</span>
-                                        <input type="number" name="items-__prefix__-unit_price" id="id_items-__prefix__-unit_price" class="form-control" step="0.01" min="0" value="0.00" style="width:100px;">
-                                    </div>
-                                </td>
-                                <td><input type="number" name="items-__prefix__-discount_percent" id="id_items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0" style="width:70px;"></td>
-                                <td><span class="row-total text-success fw-semibold">{{ company.currency_symbol }} 0.00</span></td>
+                                <td><input type="number" name="items-__prefix__-quantity" id="id_items-__prefix__-quantity" class="form-control form-control-sm" min="1" value="1"></td>
+                                <td><input type="number" name="items-__prefix__-unit_price" id="id_items-__prefix__-unit_price" class="form-control form-control-sm" step="0.01" min="0" value="0.00" readonly></td>
+                                <td><input type="number" name="items-__prefix__-discount_percent" id="id_items-__prefix__-discount_percent" class="form-control form-control-sm" step="0.01" min="0" max="100" value="0"></td>
+                                <td><span class="row-total text-success fw-semibold text-nowrap">{{ company.currency_symbol }} 0.00</span></td>
                                 <td>
                                     <label class="text-danger" style="cursor:pointer;">
                                         <input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE" style="display:none;">

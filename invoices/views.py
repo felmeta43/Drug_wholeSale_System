@@ -36,6 +36,11 @@ class InvoiceListView(LoginRequiredMixin, ListView):
         ).aggregate(total=Sum('balance_due'))['total'] or 0
         return context
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['invoices/_invoice_results.html']
+        return [self.template_name]
+
 
 class InvoiceCreateView(LoginRequiredMixin, CreateView):
     model = Invoice

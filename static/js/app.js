@@ -209,3 +209,47 @@ document.querySelectorAll('.stock-bar-fill').forEach(function (bar) {
     else if (pct < 50) { bar.classList.add('stock-low'); }
     else { bar.classList.add('stock-ok'); }
 });
+
+// ===== LIVE SEARCH FORMS =====
+function initLiveSearchForms() {
+    document.querySelectorAll('.live-search-form').forEach(function(form) {
+        var containerId = form.dataset.target;
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        var debounceTimer;
+
+        function fetchResults(url) {
+            var fetchUrl = url || (form.getAttribute('action') || window.location.pathname) + '?' + new URLSearchParams(new FormData(form)).toString();
+            fetch(fetchUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    container.innerHTML = html;
+                    history.replaceState(null, '', fetchUrl);
+                    attachPaginationLinks();
+                });
+        }
+
+        function attachPaginationLinks() {
+            container.querySelectorAll('a.page-link').forEach(function(a) {
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetchResults(this.getAttribute('href'));
+                });
+            });
+        }
+
+        form.addEventListener('submit', function(e) { e.preventDefault(); fetchResults(); });
+        form.querySelectorAll('input[type="text"], input[type="search"]').forEach(function(inp) {
+            inp.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() { fetchResults(); }, 350);
+            });
+        });
+        form.querySelectorAll('select').forEach(function(sel) {
+            sel.addEventListener('change', function() { fetchResults(); });
+        });
+
+        attachPaginationLinks();
+    });
+}
+document.addEventListener('DOMContentLoaded', initLiveSearchForms);

@@ -175,6 +175,24 @@
             </span>
             {% if user.is_authenticated %}
             <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary position-relative" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell"></i>
+                    {% if unread_notification_count %}
+                    <span class="notification-badge">{{ unread_notification_count }}</span>
+                    {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" style="width:320px;max-height:400px;overflow-y:auto;">
+                    <li><h6 class="dropdown-header d-flex justify-content-between">Notifications {% if unread_notification_count %}<a href="{% url 'notification_mark_all_read' %}" class="small">Mark all read</a>{% endif %}</h6></li>
+                    {% for n in unread_notifications %}
+                    <li><a class="dropdown-item small" href="{% url 'notification_read' n.pk %}">{{ n.message }}<br><span class="text-muted" style="font-size:0.7rem;">{{ n.created_at|timesince }} ago</span></a></li>
+                    {% empty %}
+                    <li><span class="dropdown-item-text text-muted small">No new notifications</span></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item small text-center" href="{% url 'notification_list' %}">View all</a></li>
+                </ul>
+            </div>
+            <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
                     <div class="rounded-circle text-white d-flex align-items-center justify-content-center" style="width:30px;height:30px;font-size:0.8rem;background:{{ company.primary_color }};">
                         {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}

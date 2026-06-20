@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Approve Transfer Request - MediWholesale{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-0"><i class="bi bi-check2-circle me-2 text-primary"></i>Approve &amp; Ship - {{ transfer.transfer_number }}</h4>
+    <p class="text-muted small mb-0 mt-1">
+        {{ transfer.to_warehouse.name }} requested this transfer from {{ transfer.from_warehouse.name }}.
+        Choose the batch and quantity to ship for each item below.
+    </p>
+</div>
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    <div class="card table-card mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Product</th><th>Requested Qty</th><th>Batch</th><th>Quantity to Send</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr>
+                            {{ form.id }}
+                            <td>{{ form.instance.product_variant }}</td>
+                            <td>{{ form.instance.quantity_requested }}</td>
+                            <td>{{ form.batch }}</td>
+                            <td>{{ form.quantity_sent }}</td>
+                        </tr>
+                        {% if form.errors %}
+                        <tr><td colspan="4"><small class="text-danger">{{ form.errors }}</small></td></tr>
+                        {% endif %}
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No items on this request.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Approve &amp; Ship</button>
+    <a href="{% url 'transfer_detail' transfer.pk %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

@@ -34,7 +34,12 @@ class PurchaseOrderItemForm(forms.ModelForm):
         fields = ['product_variant', 'quantity', 'unit_price', 'discount_percent',
                   'batch_number', 'expiry_date']
         widgets = {
-            'expiry_date': forms.DateInput(attrs={'type': 'date'}),
+            'product_variant': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '1'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0'}),
+            'discount_percent': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'max': '100'}),
+            'batch_number': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Batch #'}),
+            'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
         }
 
 
@@ -75,6 +80,12 @@ class SalesOrderItemForm(forms.ModelForm):
     class Meta:
         model = SalesOrderItem
         fields = ['product_variant', 'batch', 'quantity', 'unit_price', 'discount_percent']
+        widgets = {
+            'product_variant': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '1'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'readonly': 'readonly'}),
+            'discount_percent': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0', 'max': '100'}),
+        }
 
 
 SalesOrderItemFormSet = inlineformset_factory(
