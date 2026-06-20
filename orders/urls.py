@@ -6,6 +6,7 @@ urlpatterns = [
     path('purchase/create/', views.purchase_order_create, name='purchase_order_create'),
     path('purchase/<int:pk>/', views.PurchaseOrderDetailView.as_view(), name='purchase_order_detail'),
     path('purchase/<int:pk>/status/', views.purchase_order_update_status, name='purchase_order_status'),
+    path('purchase/<int:pk>/approve/', views.purchase_order_approve, name='purchase_order_approve'),
     path('purchase/<int:pk>/receive/', views.receive_purchase_order, name='receive_purchase_order'),
     path('sales/', views.SalesOrderListView.as_view(), name='sales_order_list'),
     path('sales/create/', views.sales_order_create, name='sales_order_create'),

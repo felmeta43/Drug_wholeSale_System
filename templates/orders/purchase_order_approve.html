@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Approve {{ order.po_number }} - {{ company.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'purchase_order_list' %}">Purchase Orders</a></li>
+<li class="breadcrumb-item"><a href="{% url 'purchase_order_detail' order.pk %}">{{ order.po_number }}</a></li>
+<li class="breadcrumb-item active">Approve</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4 class="mb-1"><i class="bi bi-check-circle text-success me-2"></i>Approve {{ order.po_number }}</h4>
+    <small class="text-muted">Set the markup percentage to apply on top of each item's purchase price to determine its new selling price.</small>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top:80px;">
+                <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Markup</h6></div>
+                <div class="card-body">
+                    <label class="form-label">{{ form.markup_percent.label }} <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        {{ form.markup_percent }}
+                        <span class="input-group-text">%</span>
+                    </div>
+                    {% if form.markup_percent.errors %}<div class="text-danger small">{{ form.markup_percent.errors }}</div>{% endif %}
+                    <div class="form-text">{{ form.markup_percent.help_text }}</div>
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>Approve Order
+                        </button>
+                        <a href="{% url 'purchase_order_detail' order.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Resulting Selling Prices</h6></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 order-items-table">
+                            <colgroup>
+                                <col style="width:40%;">
+                                <col style="width:20%;">
+                                <col style="width:20%;">
+                                <col style="width:20%;">
+                            </colgroup>
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Purchase Price</th>
+                                    <th class="text-end">Current Selling Price</th>
+                                    <th class="text-end">New Selling Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approveItemsBody">
+                                {% for item in items %}
+                                <tr data-unit-price="{{ item.unit_price }}">
+                                    <td>{{ item.product_variant }}</td>
+                                    <td class="text-end">{{ company.currency_symbol }} {{ item.unit_price|floatformat:2 }}</td>
+                                    <td class="text-end text-muted">{{ company.currency_symbol }} {{ item.product_variant.selling_price|floatformat:2 }}</td>
+                                    <td class="text-end fw-semibold text-success new-selling-price">{{ company.currency_symbol }} {{ item.unit_price|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center text-muted py-3">No items.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var APPROVE_CURRENCY_SYMBOL = '{{ company.currency_symbol|escapejs }}';
+document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('id_markup_percent');
+    if (!input) return;
+    function recalc() {
+        var pct = parseFloat(input.value) || 0;
+        document.querySelectorAll('#approveItemsBody tr[data-unit-price]').forEach(function(row) {
+            var unitPrice = parseFloat(row.dataset.unitPrice) || 0;
+            var newPrice = unitPrice * (1 + pct / 100);
+            row.querySelector('.new-selling-price').textContent = APPROVE_CURRENCY_SYMBOL + ' ' + newPrice.toFixed(2);
+        });
+    }
+    input.addEventListener('input', recalc);
+    recalc();
+});
+</script>
+{% endblock %}

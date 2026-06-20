@@ -7,7 +7,11 @@ from django.urls import reverse_lazy
 from django.db.models import Q
 from .models import PurchaseOrder, PurchaseOrderItem, SalesOrder, SalesOrderItem
 from .forms import (PurchaseOrderForm, PurchaseOrderItemFormSet,
-                    SalesOrderForm, SalesOrderItemFormSet)
+                    SalesOrderForm, SalesOrderItemFormSet, PurchaseOrderApproveForm)
+
+
+def _can_approve_purchase_order(user):
+    return user.is_superuser or getattr(user, 'role', '') in ('admin', 'manager')
 
 
 class PurchaseOrderListView(LoginRequiredMixin, ListView):
@@ -77,13 +81,46 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
 def purchase_order_update_status(request, pk):
     order = get_object_or_404(PurchaseOrder, pk=pk)
     new_status = request.POST.get('status')
+    if new_status == 'approved':
+        return redirect('purchase_order_approve', pk=pk)
     if new_status in dict(PurchaseOrder.STATUS_CHOICES):
         order.status = new_status
-        if new_status == 'approved':
-            order.approved_by = request.user
         order.save()
         messages.success(request, f'Order status updated to {order.get_status_display()}.')
     return redirect('purchase_order_detail', pk=pk)
+
+
+@login_required
+def purchase_order_approve(request, pk):
+    order = get_object_or_404(PurchaseOrder, pk=pk)
+    if not _can_approve_purchase_order(request.user):
+        messages.error(request, 'You do not have permission to approve purchase orders.')
+        return redirect('purchase_order_detail', pk=pk)
+    if order.status != 'submitted':
+        messages.warning(request, 'Only submitted orders can be approved.')
+        return redirect('purchase_order_detail', pk=pk)
+
+    form = PurchaseOrderApproveForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        markup_percent = form.cleaned_data['markup_percent']
+        for item in order.items.select_related('product_variant'):
+            new_selling_price = item.unit_price * (1 + markup_percent / 100)
+            variant = item.product_variant
+            variant.cost_price = item.unit_price
+            variant.selling_price = new_selling_price
+            variant.save(update_fields=['cost_price', 'selling_price'])
+        order.status = 'approved'
+        order.approved_by = request.user
+        order.markup_percent = markup_percent
+        order.save()
+        messages.success(request, f'Purchase Order {order.po_number} approved with {markup_percent}% markup applied to selling prices.')
+        return redirect('purchase_order_detail', pk=pk)
+
+    return render(request, 'orders/purchase_order_approve.html', {
+        'order': order,
+        'form': form,
+        'items': order.items.select_related('product_variant'),
+    })
 
 
 @login_required

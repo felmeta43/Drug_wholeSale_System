@@ -28,6 +28,16 @@ class PurchaseOrderForm(forms.ModelForm):
         )
 
 
+class PurchaseOrderApproveForm(forms.Form):
+    markup_percent = forms.DecimalField(
+        label='Sell Price Markup %',
+        max_digits=5, decimal_places=2,
+        min_value=0,
+        help_text='Selling price = purchase price + (purchase price x this %)',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'autofocus': 'autofocus'})
+    )
+
+
 class PurchaseOrderItemForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrderItem
