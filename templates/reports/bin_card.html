@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Item Bin Card - {{ company.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-journal-text me-2 text-primary"></i>Item Bin Card</h4>
+        {% if variant %}
+        <button type="button" class="btn btn-outline-secondary" onclick="exportTableToCSV('binCardTable', 'bin_card.csv')">
+            <i class="bi bi-download me-1"></i>Export CSV
+        </button>
+        {% endif %}
+    </div>
+    <p class="text-muted small mb-0 mt-1">Every stock movement for a single item, with a running balance — like a paper bin card.</p>
+</div>
+<div class="card table-card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label small">Product</label>
+                <select name="variant" class="form-select" required>
+                    <option value="">-- Select Product --</option>
+                    {% for v in variants %}
+                    <option value="{{ v.pk }}" {% if variant.pk == v.pk %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Warehouse</label>
+                <select name="warehouse" class="form-select">
+                    <option value="">All Warehouses</option>
+                    {% for wh in warehouses %}
+                    <option value="{{ wh.pk }}" {% if warehouse.pk == wh.pk %}selected{% endif %}>{{ wh.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if variant %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-secondary border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Opening Balance</div>
+                <div class="fs-4 fw-bold">{{ opening_balance }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-primary border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Closing Balance</div>
+                <div class="fs-4 fw-bold text-primary">{{ closing_balance }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card border-start border-info border-4">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Transactions</div>
+                <div class="fs-4 fw-bold">{{ rows|length }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card table-card">
+    <div class="card-header bg-transparent">
+        <h6 class="fw-bold mb-0">{{ variant }}{% if warehouse %} — {{ warehouse.name }}{% endif %}</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="binCardTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th><th>Type</th><th>Batch</th><th>Warehouse</th>
+                        <th>Reference</th><th>In</th><th>Out</th><th>Balance</th><th>Performed By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if not warehouse %}
+                    <tr class="table-secondary"><td colspan="9"><small>Opening Balance</small></td><td><strong>{{ opening_balance }}</strong></td><td></td></tr>
+                    {% endif %}
+                    {% for row in rows %}
+                    <tr>
+                        <td><small>{{ row.movement.created_at|date:"d M Y H:i" }}</small></td>
+                        <td>
+                            <span class="badge bg-{% if row.movement.movement_type == 'in' %}success{% elif row.movement.movement_type == 'out' %}danger{% elif row.movement.movement_type == 'transfer' %}info{% elif row.movement.movement_type == 'adjustment' %}warning text-dark{% else %}secondary{% endif %}">
+                                {{ row.movement.get_movement_type_display }}
+                            </span>
+                        </td>
+                        <td><small class="font-monospace">{{ row.movement.batch.batch_number }}</small></td>
+                        <td><small>{{ row.movement.batch.warehouse.name }}</small></td>
+                        <td><small>{{ row.movement.reference_number|default:"-" }}</small></td>
+                        <td>{% if row.delta > 0 %}<span class="text-success fw-semibold">+{{ row.delta }}</span>{% else %}-{% endif %}</td>
+                        <td>{% if row.delta < 0 %}<span class="text-danger fw-semibold">{{ row.delta }}</span>{% else %}-{% endif %}</td>
+                        <td><strong>{{ row.balance }}</strong></td>
+                        <td><small>{{ row.movement.performed_by|default:"-" }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No transactions in this period.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card table-card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+        Select a product above to view its bin card.
+    </div>
+</div>
+{% endif %}
+{% endblock %}

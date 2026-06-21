@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 
@@ -126,3 +128,37 @@ class CompanySettings(models.Model):
             f"{self.secondary_color} 33.3%, {self.secondary_color} 66.6%, "
             f"{self.accent_color} 66.6%)"
         )
+
+
+class AuditLog(models.Model):
+    """Records who created/updated/deleted a tracked record and when.
+    Populated automatically by signal handlers in core/signals.py — nothing
+    else should write to this model directly."""
+
+    ACTION_CHOICES = [
+        ('create', 'Created'),
+        ('update', 'Updated'),
+        ('delete', 'Deleted'),
+        ('login', 'Logged In'),
+        ('logout', 'Logged Out'),
+        ('login_failed', 'Login Failed'),
+    ]
+
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='audit_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.CharField(max_length=50, blank=True)
+    object_repr = models.CharField(max_length=255, blank=True)
+    changes = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_action_display()} {self.object_repr} by {self.actor or 'system'}"
+
+    @property
+    def model_label(self):
+        return self.content_type.model if self.content_type else ''

@@ -1,9 +1,22 @@
-from django.shortcuts import render
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Sum, Count, F, Q
+from django.shortcuts import render, redirect
 from django.utils import timezone
 from datetime import timedelta, date
 import json
+
+
+def admin_required(view_func):
+    """Gate admin-only report pages the same way core.views.company_settings does."""
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not (request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'):
+            messages.error(request, 'You do not have permission to view this page.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 @login_required
@@ -296,4 +309,164 @@ def expiry_report_page(request):
         'expiring_soon': expiring_soon,
         'expired': expired,
         'today': today,
+    })
+
+
+@login_required
+def stock_balance_report(request):
+    """Current stock balance per product/warehouse, with a link into the
+    bin card for the full transaction history behind each row."""
+    from inventory.models import StockBatch
+    from warehouse.models import Warehouse
+
+    warehouses = Warehouse.objects.filter(is_active=True)
+    selected_warehouse = request.GET.get('warehouse')
+    search = request.GET.get('search')
+
+    balances = StockBatch.objects.values(
+        'product_variant_id', 'product_variant__product__name',
+        'product_variant__strength', 'product_variant__packaging',
+        'warehouse_id', 'warehouse__name',
+    ).annotate(
+        qty_available=Sum('quantity_available'),
+        qty_reserved=Sum('quantity_reserved'),
+        stock_value=Sum(F('quantity_available') * F('purchase_price')),
+    ).order_by('product_variant__product__name', 'warehouse__name')
+
+    if selected_warehouse:
+        balances = balances.filter(warehouse_id=selected_warehouse)
+    if search:
+        balances = balances.filter(
+            Q(product_variant__product__name__icontains=search) |
+            Q(product_variant__sku__icontains=search)
+        )
+
+    total_value = sum((b['stock_value'] or 0) for b in balances)
+
+    paginator = Paginator(list(balances), 30)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'reports/stock_balance.html', {
+        'page_obj': page_obj,
+        'rows': page_obj.object_list,
+        'warehouses': warehouses,
+        'selected_warehouse': selected_warehouse,
+        'search': search,
+        'total_value': total_value,
+    })
+
+
+def _movement_delta(movement):
+    """StockMovement.quantity is signed for every movement type except
+    'transfer', which is always recorded against the sending batch with a
+    positive quantity even though it decreases that batch's stock (see
+    warehouse/views.py) — so transfers need their sign flipped here."""
+    return -movement.quantity if movement.movement_type == 'transfer' else movement.quantity
+
+
+@login_required
+def bin_card_report(request):
+    """Per-item, per-warehouse ledger: every stock movement for a product
+    variant with a running balance, the way a paper bin card would show it."""
+    from inventory.models import StockMovement
+    from products.models import ProductVariant
+    from warehouse.models import Warehouse
+
+    variant_id = request.GET.get('variant')
+    warehouse_id = request.GET.get('warehouse')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    variant = ProductVariant.objects.filter(pk=variant_id).select_related('product').first() if variant_id else None
+    warehouse = Warehouse.objects.filter(pk=warehouse_id).first() if warehouse_id else None
+
+    rows = []
+    opening_balance = 0
+    closing_balance = 0
+
+    if variant:
+        qs = StockMovement.objects.filter(batch__product_variant=variant).select_related(
+            'batch', 'performed_by', 'from_warehouse', 'to_warehouse'
+        )
+        if warehouse:
+            qs = qs.filter(batch__warehouse=warehouse)
+
+        if date_from:
+            opening_balance = sum(
+                _movement_delta(m) for m in qs.filter(created_at__date__lt=date_from)
+            )
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        balance = opening_balance
+        for m in qs.order_by('created_at', 'id'):
+            delta = _movement_delta(m)
+            balance += delta
+            rows.append({'movement': m, 'delta': delta, 'balance': balance})
+        closing_balance = balance
+
+    return render(request, 'reports/bin_card.html', {
+        'variants': ProductVariant.objects.select_related('product').order_by('product__name', 'strength')[:500],
+        'warehouses': Warehouse.objects.filter(is_active=True),
+        'variant': variant,
+        'warehouse': warehouse,
+        'date_from': date_from,
+        'date_to': date_to,
+        'rows': rows,
+        'opening_balance': opening_balance,
+        'closing_balance': closing_balance,
+    })
+
+
+@admin_required
+def audit_report(request):
+    """Who created/updated/deleted what, and login activity, across the system."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.contenttypes.models import ContentType
+    from core.models import AuditLog
+
+    User = get_user_model()
+    qs = AuditLog.objects.select_related('actor', 'content_type').order_by('-created_at')
+
+    actor_id = request.GET.get('actor')
+    action = request.GET.get('action')
+    model_id = request.GET.get('model')
+    search = request.GET.get('search')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if actor_id:
+        qs = qs.filter(actor_id=actor_id)
+    if action:
+        qs = qs.filter(action=action)
+    if model_id:
+        qs = qs.filter(content_type_id=model_id)
+    if search:
+        qs = qs.filter(object_repr__icontains=search)
+    if date_from:
+        qs = qs.filter(created_at__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__date__lte=date_to)
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    tracked_content_types = ContentType.objects.filter(
+        pk__in=AuditLog.objects.exclude(content_type__isnull=True)
+        .values_list('content_type_id', flat=True).distinct()
+    )
+
+    return render(request, 'reports/audit_report.html', {
+        'page_obj': page_obj,
+        'logs': page_obj.object_list,
+        'users': User.objects.order_by('username'),
+        'action_choices': AuditLog.ACTION_CHOICES,
+        'content_types': tracked_content_types,
+        'selected_actor': actor_id,
+        'selected_action': action,
+        'selected_model': model_id,
+        'search': search,
+        'date_from': date_from,
+        'date_to': date_to,
     })

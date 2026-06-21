@@ -134,6 +134,12 @@
         <a href="{% url 'expiry_report_page' %}" class="nav-link">
             <i class="bi bi-exclamation-triangle"></i> Expiry Report
         </a>
+        <a href="{% url 'stock_balance_report' %}" class="nav-link {% if 'stock_balance' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-clipboard-data"></i> Stock Balance
+        </a>
+        <a href="{% url 'bin_card_report' %}" class="nav-link {% if 'bin_card' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-journal-text"></i> Item Bin Card
+        </a>
 
         {% if user.role == 'admin' or user.is_superuser %}
         <div class="sidebar-heading">Administration</div>
@@ -142,6 +148,9 @@
         </a>
         <a href="{% url 'user_list' %}" class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-people"></i> Users
+        </a>
+        <a href="{% url 'audit_report' %}" class="nav-link {% if 'audit' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-shield-lock"></i> Audit Report
         </a>
         <a href="/admin/" class="nav-link" target="_blank">
             <i class="bi bi-layout-text-sidebar"></i> Django Admin
