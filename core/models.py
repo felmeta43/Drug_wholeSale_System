@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.cache import cache
 
 
 class CompanySettings(models.Model):
@@ -98,17 +97,16 @@ class CompanySettings(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1  # enforce singleton
         super().save(*args, **kwargs)
-        cache.delete('company_settings')
 
     def delete(self, *args, **kwargs):
         pass  # prevent deletion
 
     @classmethod
     def get(cls):
-        obj = cache.get('company_settings')
-        if obj is None:
-            obj, _ = cls.objects.get_or_create(pk=1)
-            cache.set('company_settings', obj, 3600)
+        # Read straight from the DB (not cached): this is a single-row,
+        # PK lookup, and caching it caused stale values to linger per
+        # worker process for up to an hour after a save.
+        obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
     @property

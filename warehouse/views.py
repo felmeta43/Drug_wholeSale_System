@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Sum, F
+from django.http import JsonResponse
 from django.utils import timezone
 from .models import Warehouse, StockTransfer, StockTransferItem
 from .forms import (
@@ -86,6 +87,40 @@ class StockTransferListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['status_choices'] = StockTransfer.STATUS_CHOICES
         return context
+
+
+@login_required
+def warehouse_stock_api(request, pk):
+    """Items currently available in a warehouse (summed across batches), for
+    populating transfer item pickers with real, in-stock quantities."""
+    from inventory.models import StockBatch
+    from products.models import ProductVariant
+    rows = (StockBatch.objects.filter(warehouse_id=pk, quantity_available__gt=0)
+            .values('product_variant_id')
+            .annotate(available=Sum('quantity_available')))
+    variants = {v.pk: v for v in ProductVariant.objects.filter(
+        pk__in=[r['product_variant_id'] for r in rows]).select_related('product')}
+    items = sorted((
+        {'id': r['product_variant_id'], 'label': str(variants[r['product_variant_id']]), 'available': r['available']}
+        for r in rows if r['product_variant_id'] in variants
+    ), key=lambda x: x['label'])
+    return JsonResponse({'items': items})
+
+
+@login_required
+def warehouse_variant_batches_api(request, pk, variant_pk):
+    """Batches of a given product variant available in a warehouse, for
+    populating the batch picker once a product has been chosen."""
+    from inventory.models import StockBatch
+    batches = StockBatch.objects.filter(
+        warehouse_id=pk, product_variant_id=variant_pk, quantity_available__gt=0
+    ).order_by('expiry_date')
+    items = [{
+        'id': b.pk,
+        'label': f"{b.batch_number} (Qty: {b.quantity_available}, Exp: {b.expiry_date or 'N/A'})",
+        'available': b.quantity_available,
+    } for b in batches]
+    return JsonResponse({'items': items})
 
 
 @login_required

@@ -1,40 +1,157 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
-{% block title %}Request Transfer - MediWholesale{% endblock %}
+{% block title %}Request Transfer - {{ company.name }}{% endblock %}
 {% block content %}
 <div class="page-header">
     <h4 class="mb-0"><i class="bi bi-inbox-fill me-2 text-primary"></i>Request Stock Transfer</h4>
-    <p class="text-muted small mb-0 mt-1">Request stock to be sent to your warehouse. The sending warehouse will choose the batch and approve before shipping.</p>
+    <p class="text-muted small mb-0 mt-1">Request stock to be sent to your warehouse. Pick the source warehouse below to see what's actually in stock there — the sending warehouse will choose the batch and approve before shipping.</p>
 </div>
-<form method="post">
+<form method="post" id="transferRequestForm">
     {% csrf_token %}
     <div class="card table-card mb-4">
         <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Request Details</h6></div>
         <div class="card-body">{% crispy form %}</div>
     </div>
     <div class="card table-card mb-4">
-        <div class="card-header bg-transparent"><h6 class="fw-bold mb-0">Requested Items</h6></div>
-        <div class="card-body">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0">Requested Items</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addTransferRequestItem">
+                <i class="bi bi-plus-lg me-1"></i>Add Item
+            </button>
+        </div>
+        <div class="card-body p-0">
             {{ formset.management_form }}
+            {% if formset.non_form_errors %}<div class="alert alert-danger m-3">{{ formset.non_form_errors }}</div>{% endif %}
             <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead class="table-light"><tr><th>Product Variant</th><th>Quantity Requested</th><th>Notes</th><th>Delete</th></tr></thead>
-                    <tbody>
+                <table class="table table-sm mb-0 order-items-table">
+                    <colgroup>
+                        <col style="width:45%;">
+                        <col style="width:20%;">
+                        <col style="width:30%;">
+                        <col style="width:5%;">
+                    </colgroup>
+                    <thead class="table-light">
+                        <tr><th>Product</th><th>Quantity Requested</th><th>Notes</th><th></th></tr>
+                    </thead>
+                    <tbody id="transferRequestItemsBody">
                         {% for item_form in formset %}
-                        <tr>
+                        <tr class="transfer-item-row order-item-row">
                             {{ item_form.id }}
-                            <td>{{ item_form.product_variant }}</td>
-                            <td>{{ item_form.quantity_requested }}</td>
+                            <td>
+                                {{ item_form.product_variant }}
+                                {% if item_form.product_variant.errors %}<div class="text-danger small">{{ item_form.product_variant.errors }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {{ item_form.quantity_requested }}
+                                {% if item_form.quantity_requested.errors %}<div class="text-danger small">{{ item_form.quantity_requested.errors }}</div>{% endif %}
+                            </td>
                             <td>{{ item_form.notes }}</td>
-                            <td>{{ item_form.DELETE }}</td>
+                            <td>
+                                <label class="text-danger" style="cursor:pointer;" title="Remove">
+                                    {{ item_form.DELETE }}
+                                    <i class="bi bi-trash3"></i>
+                                </label>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            <table style="display:none;">
+                <tbody>
+                    <tr class="transfer-item-row order-item-row" id="empty-transfer-request-item-row">
+                        <input type="hidden" name="items-__prefix__-id" id="id_items-__prefix__-id">
+                        <td>
+                            <select name="items-__prefix__-product_variant" id="id_items-__prefix__-product_variant" class="form-select form-select-sm js-variant-select">
+                                <option value="">-- Select Source Warehouse First --</option>
+                            </select>
+                        </td>
+                        <td><input type="number" name="items-__prefix__-quantity_requested" id="id_items-__prefix__-quantity_requested" class="form-control form-control-sm js-qty-input" min="1" value="1"></td>
+                        <td><input type="text" name="items-__prefix__-notes" id="id_items-__prefix__-notes" class="form-control form-control-sm"></td>
+                        <td>
+                            <label class="text-danger" style="cursor:pointer;">
+                                <input type="checkbox" name="items-__prefix__-DELETE" style="display:none;">
+                                <i class="bi bi-trash3" onclick="this.closest('tr').remove();"></i>
+                            </label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
     <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Submit Request</button>
     <a href="{% url 'transfer_list' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var TRANSFER_REQUEST_STOCK = [];
+
+function loadTransferRequestStock(warehouseId) {
+    if (!warehouseId) { TRANSFER_REQUEST_STOCK = []; refreshTransferRequestVariantSelects(); return; }
+    fetch('/warehouse/api/stock/' + warehouseId + '/')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            TRANSFER_REQUEST_STOCK = data.items || [];
+            refreshTransferRequestVariantSelects();
+        });
+}
+
+function populateTransferRequestVariantSelect(select) {
+    var current = select.value;
+    select.innerHTML = '';
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = TRANSFER_REQUEST_STOCK.length ? '-- Select Product --' : '-- No Stock Available --';
+    select.appendChild(placeholder);
+    TRANSFER_REQUEST_STOCK.forEach(function (it) {
+        var opt = document.createElement('option');
+        opt.value = it.id;
+        opt.textContent = it.label + ' (Available: ' + it.available + ')';
+        opt.dataset.available = it.available;
+        select.appendChild(opt);
+    });
+    if (current && select.querySelector('option[value="' + current + '"]')) select.value = current;
+}
+
+function refreshTransferRequestVariantSelects() {
+    document.querySelectorAll('#transferRequestItemsBody .js-variant-select').forEach(populateTransferRequestVariantSelect);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var fromWarehouseSelect = document.getElementById('id_from_warehouse');
+    if (fromWarehouseSelect) {
+        fromWarehouseSelect.addEventListener('change', function () { loadTransferRequestStock(this.value); });
+        if (fromWarehouseSelect.value) loadTransferRequestStock(fromWarehouseSelect.value);
+    }
+
+    document.querySelectorAll('#transferRequestItemsBody tr.transfer-item-row').forEach(attachQtyValidation);
+
+    document.getElementById('addTransferRequestItem').addEventListener('click', function () {
+        var tbody = document.getElementById('transferRequestItemsBody');
+        var emptyRow = document.getElementById('empty-transfer-request-item-row');
+        var total = parseInt(document.getElementById('id_items-TOTAL_FORMS').value);
+        var newRow = emptyRow.cloneNode(true);
+        newRow.id = '';
+        newRow.style.display = '';
+        newRow.querySelectorAll('[name],[id]').forEach(function (el) {
+            if (el.name) el.name = el.name.replace('__prefix__', total);
+            if (el.id) el.id = el.id.replace('__prefix__', total);
+        });
+        tbody.appendChild(newRow);
+        document.getElementById('id_items-TOTAL_FORMS').value = total + 1;
+        populateTransferRequestVariantSelect(newRow.querySelector('.js-variant-select'));
+        attachQtyValidation(newRow);
+    });
+
+    document.getElementById('transferRequestForm').addEventListener('submit', function (e) {
+        var ok = true;
+        document.querySelectorAll('#transferRequestItemsBody .js-qty-input').forEach(function (input) {
+            if (!validateQtyInput(input)) ok = false;
+        });
+        if (!ok) e.preventDefault();
+    });
+});
+</script>
 {% endblock %}

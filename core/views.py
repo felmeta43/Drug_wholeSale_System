@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.core.cache import cache
 from .models import CompanySettings
 from .forms import CompanySettingsForm
 
@@ -18,7 +17,6 @@ def company_settings(request):
 
     if request.method == 'POST' and form.is_valid():
         form.save()
-        cache.delete('company_settings')
         messages.success(request, 'Company settings saved successfully.')
         return redirect('company_settings')
 

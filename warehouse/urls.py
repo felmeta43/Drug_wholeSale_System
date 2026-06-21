@@ -12,4 +12,6 @@ urlpatterns = [
     path('transfers/<int:pk>/', views.StockTransferDetailView.as_view(), name='transfer_detail'),
     path('transfers/<int:pk>/approve-request/', views.stock_transfer_approve_request, name='transfer_approve_request'),
     path('transfers/<int:pk>/complete/', views.complete_transfer, name='complete_transfer'),
+    path('api/stock/<int:pk>/', views.warehouse_stock_api, name='warehouse_stock_api'),
+    path('api/stock/<int:pk>/variant/<int:variant_pk>/batches/', views.warehouse_variant_batches_api, name='warehouse_variant_batches_api'),
 ]

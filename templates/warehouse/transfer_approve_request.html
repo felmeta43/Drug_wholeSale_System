@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Approve Transfer Request - MediWholesale{% endblock %}
+{% block title %}Approve Transfer Request - {{ company.name }}{% endblock %}
 {% block content %}
 <div class="page-header">
     <h4 class="mb-0"><i class="bi bi-check2-circle me-2 text-primary"></i>Approve &amp; Ship - {{ transfer.transfer_number }}</h4>
@@ -8,9 +8,10 @@
         Choose the batch and quantity to ship for each item below.
     </p>
 </div>
-<form method="post">
+<form method="post" id="transferApproveForm">
     {% csrf_token %}
     {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors }}</div>{% endif %}
     <div class="card table-card mb-4">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -18,14 +19,20 @@
                     <thead class="table-light">
                         <tr><th>Product</th><th>Requested Qty</th><th>Batch</th><th>Quantity to Send</th></tr>
                     </thead>
-                    <tbody>
+                    <tbody id="transferApproveItemsBody">
                         {% for form in formset %}
-                        <tr>
+                        <tr class="transfer-item-row">
                             {{ form.id }}
                             <td>{{ form.instance.product_variant }}</td>
                             <td>{{ form.instance.quantity_requested }}</td>
-                            <td>{{ form.batch }}</td>
-                            <td>{{ form.quantity_sent }}</td>
+                            <td>
+                                {{ form.batch }}
+                                {% if form.batch.errors %}<div class="text-danger small">{{ form.batch.errors }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {{ form.quantity_sent }}
+                                {% if form.quantity_sent.errors %}<div class="text-danger small">{{ form.quantity_sent.errors }}</div>{% endif %}
+                            </td>
                         </tr>
                         {% if form.errors %}
                         <tr><td colspan="4"><small class="text-danger">{{ form.errors }}</small></td></tr>
@@ -41,4 +48,23 @@
     <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Approve &amp; Ship</button>
     <a href="{% url 'transfer_detail' transfer.pk %}" class="btn btn-outline-secondary ms-2">Cancel</a>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#transferApproveItemsBody tr.transfer-item-row').forEach(attachQtyValidation);
+
+    var form = document.getElementById('transferApproveForm');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            var ok = true;
+            document.querySelectorAll('#transferApproveItemsBody .js-qty-input').forEach(function (input) {
+                if (!validateQtyInput(input)) ok = false;
+            });
+            if (!ok) e.preventDefault();
+        });
+    }
+});
+</script>
 {% endblock %}

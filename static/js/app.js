@@ -253,3 +253,52 @@ function initLiveSearchForms() {
     });
 }
 document.addEventListener('DOMContentLoaded', initLiveSearchForms);
+
+// ===== STOCK TRANSFER QUANTITY VALIDATION =====
+// Used by transfer_form.html, transfer_request_form.html,
+// transfer_approve_request.html and complete_transfer.html to stop a
+// quantity from being submitted above what's actually available, requested,
+// or already sent — whichever caps apply to that row.
+function getRowAvailable(row) {
+    var select = row.querySelector('.js-batch-select') || row.querySelector('.js-variant-select');
+    if (!select) return null;
+    var opt = select.options[select.selectedIndex];
+    if (opt && opt.dataset.available !== undefined && opt.dataset.available !== '') {
+        return parseFloat(opt.dataset.available);
+    }
+    return null;
+}
+
+function validateQtyInput(input) {
+    var row = input.closest('tr');
+    var available = row ? getRowAvailable(row) : null;
+    var requestedAttr = input.dataset.requested;
+    var requested = (requestedAttr !== undefined && requestedAttr !== '') ? parseFloat(requestedAttr) : null;
+    var maxAttr = input.getAttribute('max');
+    var maxFromAttr = (maxAttr !== null && maxAttr !== '') ? parseFloat(maxAttr) : null;
+    var candidates = [available, requested, maxFromAttr].filter(function (v) { return v !== null && !isNaN(v); });
+    var max = candidates.length ? Math.min.apply(Math, candidates) : null;
+    var value = parseFloat(input.value) || 0;
+    var cell = input.closest('td') || input.parentElement;
+    var err = cell.querySelector('.qty-error');
+    if (max !== null && value > max) {
+        input.classList.add('is-invalid');
+        if (!err) {
+            err = document.createElement('div');
+            err.className = 'qty-error text-danger small';
+            cell.appendChild(err);
+        }
+        err.textContent = 'Cannot exceed available stock (' + max + ').';
+        return false;
+    }
+    input.classList.remove('is-invalid');
+    if (err) err.remove();
+    return true;
+}
+
+function attachQtyValidation(row) {
+    var input = row.querySelector('.js-qty-input');
+    var select = row.querySelector('.js-batch-select') || row.querySelector('.js-variant-select');
+    if (input) input.addEventListener('input', function () { validateQtyInput(input); });
+    if (select) select.addEventListener('change', function () { if (input) validateQtyInput(input); });
+}

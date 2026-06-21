@@ -60,12 +60,38 @@ class StockTransferItemForm(forms.ModelForm):
     class Meta:
         model = StockTransferItem
         fields = ['product_variant', 'batch', 'quantity_sent', 'notes']
+        widgets = {
+            'product_variant': forms.Select(attrs={'class': 'form-select form-select-sm js-variant-select'}),
+            'batch': forms.Select(attrs={'class': 'form-select form-select-sm js-batch-select'}),
+            'quantity_sent': forms.NumberInput(attrs={'class': 'form-control form-control-sm js-qty-input', 'min': '1'}),
+            'notes': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from inventory.models import StockBatch
+        # The front-end populates this select via AJAX scoped to the chosen
+        # source warehouse/product, so the queryset here only needs to allow
+        # any in-stock batch through model validation — it can't be narrowed
+        # to a single warehouse upfront since no warehouse is known until the
+        # user picks one client-side.
+        self.fields['batch'].queryset = StockBatch.objects.filter(quantity_available__gt=0)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        batch = cleaned_data.get('batch')
+        quantity_sent = cleaned_data.get('quantity_sent')
+        if batch and quantity_sent and quantity_sent > batch.quantity_available:
+            raise forms.ValidationError(
+                f'Cannot send {quantity_sent} — only {batch.quantity_available} available in batch {batch.batch_number}.'
+            )
+        return cleaned_data
 
 
 StockTransferItemFormSet = inlineformset_factory(
     StockTransfer, StockTransferItem,
     form=StockTransferItemForm,
-    extra=3, can_delete=True
+    extra=1, can_delete=True
 )
 
 
@@ -89,20 +115,45 @@ class StockTransferRequestItemForm(forms.ModelForm):
     class Meta:
         model = StockTransferItem
         fields = ['product_variant', 'quantity_requested', 'notes']
+        widgets = {
+            'product_variant': forms.Select(attrs={'class': 'form-select form-select-sm js-variant-select'}),
+            'quantity_requested': forms.NumberInput(attrs={'class': 'form-control form-control-sm js-qty-input', 'min': '1'}),
+            'notes': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+        }
 
 
 StockTransferRequestItemFormSet = inlineformset_factory(
     StockTransfer, StockTransferItem,
     form=StockTransferRequestItemForm,
     fields=['product_variant', 'quantity_requested', 'notes'],
-    extra=3, can_delete=True
+    extra=1, can_delete=True
 )
+
+
+class BatchSelectWithStock(forms.Select):
+    """Renders each batch <option> with a data-available attribute so the
+    front-end can validate quantity_sent against real stock without an
+    extra round-trip."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        if value:
+            from inventory.models import StockBatch
+            pk = value.value if hasattr(value, 'value') else value
+            available = StockBatch.objects.filter(pk=pk).values_list('quantity_available', flat=True).first()
+            if available is not None:
+                option['attrs']['data-available'] = available
+        return option
 
 
 class StockTransferApproveItemForm(forms.ModelForm):
     class Meta:
         model = StockTransferItem
         fields = ['batch', 'quantity_sent']
+        widgets = {
+            'batch': BatchSelectWithStock(attrs={'class': 'form-select form-select-sm js-batch-select'}),
+            'quantity_sent': forms.NumberInput(attrs={'class': 'form-control form-control-sm js-qty-input', 'min': '1'}),
+        }
 
     def __init__(self, *args, from_warehouse=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -117,6 +168,7 @@ class StockTransferApproveItemForm(forms.ModelForm):
             self.fields['batch'].queryset = qs
         else:
             self.fields['batch'].queryset = StockBatch.objects.none()
+        self.fields['quantity_sent'].widget.attrs['data-requested'] = self.instance.quantity_requested or ''
 
 
 StockTransferApproveItemFormSet = inlineformset_factory(
@@ -132,7 +184,7 @@ class StockTransferReceiveItemForm(forms.ModelForm):
         model = StockTransferItem
         fields = ['quantity_received']
         widgets = {
-            'quantity_received': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'style': 'width:100px;', 'min': 0}),
+            'quantity_received': forms.NumberInput(attrs={'class': 'form-control form-control-sm js-qty-input', 'style': 'width:100px;', 'min': 0}),
         }
 
     def __init__(self, *args, **kwargs):
